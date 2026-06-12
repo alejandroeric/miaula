@@ -204,16 +204,20 @@ function vWelcome(){
 <p style="color:#7C3AED;font-weight:700;font-size:15px;margin-bottom:6px">¡Aún no hay alumnos cargados!</p>
 <p style="color:#A78BFA;font-size:13px">Entrá al Panel Mamá/Papá para agregar alumnos</p>
 </div>`;
-  const grid=ss.length?`<div style="display:grid;grid-template-columns:${ss.length===1?'1fr':ss.length===2?'1fr 1fr':'repeat(2,1fr)'};gap:12px;margin-bottom:18px">${cards}</div>`:
-  `<div style="margin-bottom:18px">${cards}</div>`;
+  const grid=ss.length?`<div style="display:grid;grid-template-columns:${ss.length===1?'1fr':ss.length===2?'1fr 1fr':'repeat(2,1fr)'};gap:12px;margin-bottom:12px">${cards}</div>`:
+  `<div style="margin-bottom:12px">${cards}</div>`;
   return`<div class="page" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;animation:fup .35s ease">
-<div style="background:linear-gradient(135deg,#7C3AED,#A855F7,#C084FC);background-size:200%;animation:shi 4s ease infinite;border-radius:28px;padding:26px 36px;margin-bottom:26px;box-shadow:0 10px 40px rgba(109,40,217,.4)">
+<div style="width:100%;max-width:500px">
+<div style="background:linear-gradient(135deg,#7C3AED,#A855F7,#C084FC);background-size:200%;animation:shi 4s ease infinite;border-radius:22px;padding:26px 20px;margin-bottom:12px;box-shadow:0 10px 40px rgba(109,40,217,.4);width:100%">
 <div style="font-size:66px;animation:bou 2s infinite;display:block;margin-bottom:8px">🎒</div>
 <h1 style="font-family:'Fredoka One';font-size:38px;color:white;margin-bottom:3px">¡Mi Aula!</h1>
 <p style="color:rgba(255,255,255,.85);font-size:13px">Seleccioná quién va a estudiar hoy</p>
 </div>
-<div style="width:100%;max-width:500px">${grid}
-<button class="btn b-ind" style="width:100%;border-radius:18px;padding:13px 22px;font-size:14px" onclick="go('parent')">🔐 Panel Mamá/Papá</button>
+${grid}
+<div class="stu-card" onclick="go('parent')" style="margin-top:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(99,102,241,.25),rgba(124,58,237,.25));border-color:rgba(139,92,246,.4)">
+  <span class="stu-avatar">🔐</span>
+  <div class="stu-name" style="font-size:15px">Panel Mamá/Papá</div>
+</div>
 </div></div>`;}
 
 // ── STUDENT HOME ────────────────────────────────────────
