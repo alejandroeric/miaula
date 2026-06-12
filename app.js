@@ -34,7 +34,8 @@ let state={
   printContent:'',loadingPrint:false,
   editingStudent:null,pEditTab:'list',
   sopaGrid:[],sopaWordList:[],sopaFound:[],sopaStart:null,sopaLoading:false,
-  cruciGrid:[],cruciClues:{across:[],down:[]},cruciNums:{},cruciAnswers:{},cruciChecked:false,cruciLoading:false
+  cruciGrid:[],cruciClues:{across:[],down:[]},cruciNums:{},cruciAnswers:{},cruciChecked:false,cruciLoading:false,
+  dicResult:null,dicHistory:[],loadingDic:false
 };
 
 // ── STORAGE ────────────────────────────────────────────
@@ -256,6 +257,24 @@ ${state.achievements?.length>0?`<div class="card" style="padding:12px 14px;margi
 <button class="back-btn btn" onclick="go('welcome')">← Cambiar alumno</button>
 </div></div>`;}
 
+// ── DICCIONARIO ────────────────────────────────────────
+async function buscarDic(word){
+  if(!word||!word.trim())return;
+  word=word.trim().toLowerCase();
+  state.loadingDic=true;state.dicResult=null;render();
+  const prompt=`Definí la palabra "${word}" para un ${gradeStr()}.
+Respondé SOLO con este JSON exacto (sin texto extra, sin markdown):
+{"word":"${word}","type":"sustantivo masculino","def":"definición formal correcta como en el diccionario RAE","simple":"explicación simple y divertida adaptada a la edad del alumno con un ejemplo usando su nombre"}
+El campo "type" DEBE contener la clasificación gramatical real de la palabra (ejemplos: "sustantivo femenino", "verbo transitivo", "adjetivo", "adverbio", "preposición", etc.). Nunca dejes "type" vacío.`;
+  const r=await ai([{role:'user',content:prompt}],'Respondé SOLO con JSON válido, sin markdown ni texto extra.',600);
+  try{
+    const parsed=JSON.parse(r.replace(/```json|```/g,'').trim());
+    state.dicResult=parsed;
+    if(!state.dicHistory.includes(word)){state.dicHistory=[word,...state.dicHistory].slice(0,5);}
+  }catch{state.dicResult={word,type:'',def:'No se pudo obtener la definición. Intentá de nuevo.',simple:''};}
+  state.loadingDic=false;render();
+}
+
 // ── SUBJECT ────────────────────────────────────────────
 function vSubject(){
   const s=state.subj,tl=(state.topics[s.id]||[]),kl=(state.tasks[s.id]||[]);
@@ -278,13 +297,46 @@ ${done>0?`<span style="background:rgba(16,185,129,.15);color:#059669;font-size:1
   ${t.content?`<div style="font-size:12px;color:#C4B5FD;margin-top:3px;line-height:1.5">${t.content.substring(0,100)}${t.content.length>100?'...':''}</div>`:''}
 </div>
 <div style="font-size:18px;color:${t.isExam?'#EF4444':s.cl};margin-left:10px">→</div></div>`).join(''):`<div class="card" style="text-align:center;padding:36px"><div style="font-size:44px">📋</div><p style="color:#7C3AED;font-size:15px;margin-top:10px;font-weight:700">No hay tareas cargadas</p></div>`);
+  const isLen=s.id==='lengua';
+  const showDic=state.subjTab==='diccionario';
+  let dicBody='';
+  if(showDic){
+    const hist=state.dicHistory||[];
+    const res=state.dicResult||null;
+    const histChips=hist.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${hist.map(w=>`<button onclick="buscarDic('${w}')" style="background:rgba(6,95,70,.25);border:1px solid rgba(6,95,70,.4);color:#6EE7B7;border-radius:50px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif">${w}</button>`).join('')}</div>`:'';
+    const resBlock=state.loadingDic?`<div class="card">${spin('Buscando en el diccionario...')}</div>`:res?`
+<div class="card" style="border-top:5px solid ${s.cl}">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+    <div style="font-size:22px;font-weight:900;color:#E9D5FF">${sanitize(res.word)}</div>
+    ${res.type?`<span style="background:rgba(6,95,70,.3);color:#6EE7B7;font-size:11px;font-weight:800;padding:2px 10px;border-radius:50px;border:1px solid rgba(110,231,183,.3);text-transform:uppercase">${sanitize(res.type)}</span>`:''}
+  </div>
+  <div style="margin-bottom:14px;margin-top:12px">
+    <div style="font-size:12px;font-weight:800;color:#A78BFA;margin-bottom:5px">📖 DEFINICIÓN RAE</div>
+    <div style="font-size:14px;color:#E9D5FF;line-height:1.75">${safeMd(res.def||'')}</div>
+  </div>
+  <div style="background:rgba(6,95,70,.15);border-radius:12px;padding:14px;border:1px solid rgba(110,231,183,.2)">
+    <div style="font-size:12px;font-weight:800;color:#6EE7B7;margin-bottom:6px">✨ ¿QUÉ SIGNIFICA PARA VOS?</div>
+    <div style="font-size:14px;color:#E9D5FF;line-height:1.75">${safeMd(res.simple||'')}</div>
+  </div>
+  <button onclick="spk('${(res.def||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}','es-AR',0.75)" style="margin-top:12px;background:rgba(6,95,70,.25);border:1px solid rgba(110,231,183,.3);color:#6EE7B7;border-radius:50px;padding:7px 16px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif">🔊 Escuchar definición</button>
+</div>`:'';
+    dicBody=`<div class="card">
+<div class="ftit" style="color:#6EE7B7;margin-bottom:10px">📖 Diccionario</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+  <input class="inp" id="dicInput" placeholder="Escribí una palabra..." style="margin:0;flex:1" onkeydown="if(event.key==='Enter')buscarDic(document.getElementById('dicInput').value)">
+  <button class="btn b-grn" onclick="buscarDic(document.getElementById('dicInput').value)">Buscar</button>
+</div>
+${histChips}
+</div>${resBlock}`;
+  }
   return`<div class="page"><div class="wrap">
 <button class="back-btn btn" onclick="go('student')">← Volver</button>
 <div class="hdr" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 8px 28px ${s.cl}50"><div style="font-size:44px">${s.ic}</div><h1>${s.n}</h1></div>
 <div class="tab-row">
-<button class="tab btn ${!showT?'inactive':'active'}" style="${showT?`background:${s.cl};box-shadow:0 4px 0 ${s.sh};color:white`:''}" onclick="setSubjTab('topics')">📚 Temas</button>
-<button class="tab btn ${showT?'inactive':'active'}" style="${!showT?`background:${s.cl};box-shadow:0 4px 0 ${s.sh};color:white`:''}" onclick="setSubjTab('tasks')">📝 Tareas (${kl.length})</button>
-</div>${tItems}</div></div>`;}
+<button class="tab btn ${state.subjTab==='topics'?'active':'inactive'}" style="${state.subjTab==='topics'?`background:${s.cl};box-shadow:0 4px 0 ${s.sh};color:white`:''}" onclick="setSubjTab('topics')">📚 Temas</button>
+<button class="tab btn ${state.subjTab==='tasks'?'active':'inactive'}" style="${state.subjTab==='tasks'?`background:${s.cl};box-shadow:0 4px 0 ${s.sh};color:white`:''}" onclick="setSubjTab('tasks')">📝 Tareas (${kl.length})</button>
+${isLen?`<button class="tab btn ${showDic?'active':'inactive'}" style="${showDic?`background:${s.cl};box-shadow:0 4px 0 ${s.sh};color:white`:''}" onclick="setSubjTab('diccionario')">📖 Diccionario</button>`:''}
+</div>${showDic?dicBody:tItems}</div></div>`;}
 
 // ── TOPIC ──────────────────────────────────────────────
 function vTopic(){
