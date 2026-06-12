@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi Aula</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Partículas de fondo -->
+<canvas id="particles" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.5"></canvas>
+
+<!-- Modal gato celebración -->
+<div id="catOverlay">
+  <div class="cat-box" id="catBox">
+    <div class="cat-emoji">🐱</div><span class="star-spin">⭐</span>
+    <h2 style="font-family:'Fredoka One';font-size:25px;color:#E9D5FF;margin:10px 0 5px" id="catName">¡Genial!</h2>
+    <p style="color:#C4B5FD;font-size:14px;font-weight:700;line-height:1.6;margin:0 0 6px">🌟 ¡Respondiste perfectamente!<br>¡Sos una super estrella! ✨</p>
+    <p id="catStars" style="color:#FCD34D;font-size:18px;font-weight:800;margin-bottom:16px"></p>
+    <button class="btn b-vio" onclick="hideCat()">¡Gracias! 🐱</button>
+  </div>
+</div>
+
+<div id="app"></div>
+
+<script src="app.js"></script>
+<script>
+// ── PARTÍCULAS DE FONDO ────────────────────────────
+(function(){
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize(){
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function Particle(){
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.r = Math.random() * 1.8 + 0.4;
+    this.dx = (Math.random() - 0.5) * 0.3;
+    this.dy = (Math.random() - 0.5) * 0.3;
+    this.alpha = Math.random() * 0.6 + 0.1;
+    this.color = Math.random() > 0.5 ? '139,92,246' : '192,132,252';
+  }
+
+  function init(){
+    resize();
+    particles = [];
+    const count = Math.min(80, Math.floor(W * H / 12000));
+    for(let i = 0; i < count; i++) particles.push(new Particle());
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${p.color},${p.alpha})`;
+      ctx.fill();
+      p.x += p.dx;
+      p.y += p.dy;
+      if(p.x < 0 || p.x > W) p.dx *= -1;
+      if(p.y < 0 || p.y > H) p.dy *= -1;
+    });
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', init);
+  init();
+  draw();
+})();
+</script>
+</body>
+</html>
