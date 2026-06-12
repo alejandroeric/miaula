@@ -1593,7 +1593,10 @@ function checkCruci(){
   render();
 }
 async function genTrivia(){state.loadingTrivia=true;state.triviaItems=[];state.triviaAnswers={};state.triviaChecked=false;render();
-const r=await ai([{role:'user',content:'5 preguntas de trivia para niños de 8 años. Temas: animales, naturaleza, cuerpo humano, espacio, curiosidades. JSON SOLO:\n[{"q":"¿Cuántas patas tiene una araña?","opts":["4","6","8","10"],"correct":2}]'}],'Return ONLY valid JSON array.',600);
+const TRIVIA_TEMAS=[['animales salvajes','plantas y flores','océano y peces'],['espacio y planetas','estrellas y cometas','astronomía'],['cuerpo humano','alimentación saludable','los sentidos'],['dinosaurios','animales prehistóricos','fósiles'],['inventos y tecnología','científicos famosos','descubrimientos'],['geografía','países y capitales','ríos y montañas'],['deportes','juegos olímpicos','récords mundiales'],['arte y música','pintores famosos','instrumentos musicales'],['historia','civilizaciones antiguas','personajes históricos'],['curiosidades del mundo','récords raros','datos sorprendentes']];
+const temas=TRIVIA_TEMAS[Math.floor(Math.random()*TRIVIA_TEMAS.length)];
+const seed=Math.floor(Math.random()*9000)+1000;
+const r=await ai([{role:'user',content:`Generá 5 preguntas de trivia DISTINTAS para niños de 8 años sobre estos temas: ${temas.join(', ')}. Semilla de variedad: ${seed}. JSON SOLO:\n[{"q":"¿Cuántas patas tiene una araña?","opts":["4","6","8","10"],"correct":2}]`}],'Return ONLY valid JSON array. Never repeat the same questions.',600);
 try{state.triviaItems=JSON.parse(r.replace(/```json|```/g,'').trim()).slice(0,5);}catch{state.triviaItems=[{q:'¿Cuántas patas tiene una araña?',opts:['4','6','8','10'],correct:2}];}
 state.loadingTrivia=false;render();}
 
