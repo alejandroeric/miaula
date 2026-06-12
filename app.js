@@ -52,7 +52,7 @@ function storePin(pin){return hashPin(pin);}
 // ── AI ─────────────────────────────────────────────────
 async function ai(msgs,sys,mx=1200){
   const key=getApiKey();
-  if(!key&&!isCA())return'🔑 Configurá tu API Key en Panel del Papá → ⚙️ Config.';
+  if(!key&&!isCA())return'🔑 Configurá tu API Key en Panel Mamá/Papá → ⚙️ Config.';
   try{
     const h={'Content-Type':'application/json'};
     if(key){h['x-api-key']=key;h['anthropic-version']='2023-06-01';h['anthropic-dangerous-direct-browser-access']='true';}
@@ -201,7 +201,7 @@ function vWelcome(){
 `<div style="text-align:center;padding:30px 20px;background:rgba(45,27,105,.4);border-radius:18px;border:2px dashed rgba(139,92,246,.3)">
 <div style="font-size:48px;margin-bottom:12px">👨‍👧</div>
 <p style="color:#7C3AED;font-weight:700;font-size:15px;margin-bottom:6px">¡Aún no hay alumnos cargados!</p>
-<p style="color:#A78BFA;font-size:13px">Entrá al Panel del Papá para agregar alumnos</p>
+<p style="color:#A78BFA;font-size:13px">Entrá al Panel Mamá/Papá para agregar alumnos</p>
 </div>`;
   const grid=ss.length?`<div style="display:grid;grid-template-columns:${ss.length===1?'1fr':ss.length===2?'1fr 1fr':'repeat(2,1fr)'};gap:12px;margin-bottom:18px">${cards}</div>`:
   `<div style="margin-bottom:18px">${cards}</div>`;
@@ -212,7 +212,7 @@ function vWelcome(){
 <p style="color:rgba(255,255,255,.85);font-size:13px">Seleccioná quién va a estudiar hoy</p>
 </div>
 <div style="width:100%;max-width:500px">${grid}
-<button class="btn b-ind" style="width:100%;border-radius:18px;padding:13px 22px;font-size:14px" onclick="go('parent')">🔐 Panel del Papá</button>
+<button class="btn b-ind" style="width:100%;border-radius:18px;padding:13px 22px;font-size:14px" onclick="go('parent')">🔐 Panel Mamá/Papá</button>
 </div></div>`;}
 
 // ── STUDENT HOME ────────────────────────────────────────
@@ -717,7 +717,7 @@ ${state.resumeResult?`<div style="background:rgba(109,40,217,.2);border:1.5px so
     const hasKey=!!getApiKey(),inClaude=isCA();
     body=`<div class="card" style="border-left:5px solid #7C3AED">
 <div class="ftit" style="font-size:16px;margin-bottom:12px">⚙️ Configuración</div>
-<input class="inp" id="cfgPin" type="password" placeholder="Cambiar PIN del papá (mín. 4 dígitos)">
+<input class="inp" id="cfgPin" type="password" placeholder="Cambiar PIN de mamá/papá (mín. 4 dígitos)">
 <button class="btn b-vio" onclick="saveConfig()" style="margin-bottom:16px">💾 Guardar PIN</button>
 
 ${!inClaude?`<div style="padding-top:14px;border-top:1.5px solid rgba(139,92,246,.2);margin-top:4px">
@@ -741,10 +741,10 @@ ${!inClaude?`<div style="padding-top:14px;border-top:1.5px solid rgba(139,92,246
 </div>
 </div>`;}
 
-  return`<div class="page"><div class="wrap"><button class="back-btn btn" onclick="go('welcome')">← Volver</button><div class="hdr" style="background:linear-gradient(135deg,#7C3AED,#A855F7);box-shadow:0 8px 28px rgba(109,40,217,.3)"><h1>🔧 Panel del Papá</h1></div>${tabs}${body}</div></div>`;}
+  return`<div class="page"><div class="wrap"><button class="back-btn btn" onclick="go('welcome')">← Volver</button><div class="hdr" style="background:linear-gradient(135deg,#7C3AED,#A855F7);box-shadow:0 8px 28px rgba(109,40,217,.3)"><h1>🔧 Panel Mamá/Papá</h1></div>${tabs}${body}</div></div>`;}
 
 function vParentLogin(){
-  return`<div class="page" style="display:flex;align-items:center;justify-content:center;min-height:100vh"><div class="card" style="max-width:320px;width:100%;text-align:center;padding:32px;border-radius:22px;animation:pop .3s ease"><div style="font-size:50px;margin-bottom:10px">🔐</div><div style="font-family:'Fredoka One';font-size:25px;color:#5B21B6;margin-bottom:5px">Panel del Papá</div><p style="color:#7C3AED;font-size:13px;margin-bottom:20px">Ingresá tu PIN</p><input class="inp" id="loginPin" type="password" placeholder="PIN (por defecto: 1234)" style="text-align:center;font-size:20px;letter-spacing:5px" onkeydown="if(event.key==='Enter')tryLogin()">${state.loginErr?`<p style="color:#E24B4A;font-size:13px;margin-bottom:6px">PIN incorrecto ❌</p>`:''}<button class="btn b-vio" style="width:100%;border-radius:12px;padding:12px;font-size:15px" onclick="tryLogin()">Entrar</button><button class="back-btn btn" style="justify-content:center;margin-top:12px;margin-bottom:0;width:100%" onclick="go('welcome')">← Volver</button></div></div>`;}
+  return`<div class="page" style="display:flex;align-items:center;justify-content:center;min-height:100vh"><div class="card" style="max-width:320px;width:100%;text-align:center;padding:32px;border-radius:22px;animation:pop .3s ease"><div style="font-size:50px;margin-bottom:10px">🔐</div><div style="font-family:'Fredoka One';font-size:25px;color:#5B21B6;margin-bottom:5px">Panel Mamá/Papá</div><p style="color:#7C3AED;font-size:13px;margin-bottom:20px">Ingresá tu PIN</p><input class="inp" id="loginPin" type="password" placeholder="PIN (por defecto: 1234)" style="text-align:center;font-size:20px;letter-spacing:5px" onkeydown="if(event.key==='Enter')tryLogin()">${state.loginErr?`<p style="color:#E24B4A;font-size:13px;margin-bottom:6px">PIN incorrecto ❌</p>`:''}<button class="btn b-vio" style="width:100%;border-radius:12px;padding:12px;font-size:15px" onclick="tryLogin()">Entrar</button><button class="back-btn btn" style="justify-content:center;margin-top:12px;margin-bottom:0;width:100%" onclick="go('welcome')">← Volver</button></div></div>`;}
 
 // ── PROGRESS MODAL ─────────────────────────────────────
 function showProg(){
