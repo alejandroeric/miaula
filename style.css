@@ -1,5 +1,7 @@
 /* ── RESET ─────────────────────────────────────────── */
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;max-width:100%}
+html{overflow-x:hidden;scrollbar-width:none}
+html::-webkit-scrollbar{display:none}
 
 /* ── BASE ─────────────────────────────────────────── */
 body{
@@ -14,8 +16,8 @@ body{
 body::before{
   content:'';
   position:fixed;
-  top:-20%;left:-10%;
-  width:55vw;height:55vw;
+  top:-10%;left:-5%;
+  width:40vw;height:40vw;
   background:radial-gradient(circle,rgba(109,40,217,.35) 0%,transparent 70%);
   border-radius:50%;
   animation:orbFloat 12s ease-in-out infinite;
@@ -25,8 +27,8 @@ body::before{
 body::after{
   content:'';
   position:fixed;
-  bottom:-15%;right:-10%;
-  width:45vw;height:45vw;
+  bottom:-10%;right:-5%;
+  width:35vw;height:35vw;
   background:radial-gradient(circle,rgba(192,132,252,.25) 0%,transparent 70%);
   border-radius:50%;
   animation:orbFloat 16s ease-in-out infinite reverse;

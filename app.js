@@ -230,15 +230,16 @@ function vStudent(){
     const cnt=(state.topics[sub.id]||[]).length;
     const done=(state.topics[sub.id]||[]).filter((_,i)=>state.topicProgress?.[`${sub.id}_${i}`]).length;
     const pct=cnt>0?Math.round(done/cnt*100):0;
-    return`<div class="subj-card" style="background:linear-gradient(145deg,${sub.bg},white);border-color:${sub.bd};box-shadow:0 5px 0 ${sub.sh}28" onclick="goSubj('${sub.id}')">
-<div style="font-size:34px;margin-bottom:6px">${sub.ic}</div>
-<div style="font-family:'Fredoka One';font-size:14px;color:${sub.cl};line-height:1.2">${sub.n}</div>
-${cnt>0?`<div style="font-size:10px;color:${sub.cl};margin-top:4px;font-weight:700">${done}/${cnt} temas</div>
-<div style="background:rgba(255,255,255,.6);border-radius:50px;height:5px;margin-top:4px;overflow:hidden"><div style="background:${sub.cl};height:100%;width:${pct}%;border-radius:50px;transition:width .6s ease"></div></div>`:''}
+    return`<div class="subj-card" style="background:linear-gradient(145deg,${sub.bg},white);border-color:${sub.bd};box-shadow:0 4px 0 ${sub.sh}28;padding:12px 8px" onclick="goSubj('${sub.id}')">
+<div style="font-size:26px;margin-bottom:4px">${sub.ic}</div>
+<div style="font-family:'Fredoka One';font-size:13px;color:${sub.cl};line-height:1.2">${sub.n}</div>
+${cnt>0?`<div style="font-size:10px;color:${sub.cl};margin-top:3px;font-weight:700">${done}/${cnt} temas</div>
+<div style="background:rgba(255,255,255,.6);border-radius:50px;height:4px;margin-top:3px;overflow:hidden"><div style="background:${sub.cl};height:100%;width:${pct}%;border-radius:50px;transition:width .6s ease"></div></div>`:''}
 </div>`;}).join('');
   const en=SUBJS[4];const ecnt=(state.topics[en.id]||[]).length;
-  return`<div class="page"><div class="wrap">
+  return`<div class="page" style="overflow-x:hidden"><div class="wrap">
 ${alertH}
+<button class="back-btn btn" onclick="go('welcome')" style="margin-bottom:12px">← Cambiar alumno</button>
 <div class="hdr" style="background:linear-gradient(135deg,#7C3AED,#A855F7,#C084FC);background-size:200%;animation:shi 5s ease infinite;box-shadow:0 8px 28px rgba(109,40,217,.3)">
 <div style="font-size:${s?.avatar?'46':'40'}px;margin-bottom:4px">${s?.avatar||'✏️'}</div>
 <h1>¡Hola, ${s?.name||''}!</h1>
@@ -251,14 +252,13 @@ ${state.streak>0?`<div style="background:rgba(255,255,255,.2);border-radius:50px
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px" class="subj-grid">${rows}</div>
 <div class="subj-card" style="background:linear-gradient(145deg,${en.bg},white);border-color:${en.bd};border:2.5px solid ${en.bd};display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;box-shadow:0 5px 0 ${en.sh}28" onclick="goSubj('${en.id}')">
 <div style="font-size:28px">${en.ic}</div><div><div style="font-family:'Fredoka One';font-size:18px;color:${en.cl}">${en.n}</div>${ecnt>0?`<div style="font-size:10px;color:${en.cl};font-weight:700">${ecnt} tema${ecnt>1?'s':''}</div>`:''}</div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px;margin-bottom:14px">
-<button class="btn b-ind" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px" onclick="go('cal')"><span>📅</span><span>Calendario</span></button>
-<button class="btn" style="background:linear-gradient(135deg,#8B5CF6,#A855F7);box-shadow:0 5px 0 #4C1D95;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px" onclick="showProg()"><span>📊</span><span>Progreso</span></button>
-<button class="btn" style="background:linear-gradient(135deg,#F59E0B,#F97316);box-shadow:0 5px 0 #78350F;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px" onclick="launchQuick()"><span>⚡</span><span>Repaso</span></button>
-<button class="btn b-org" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px" onclick="go('recreo')"><span>🎉</span><span>Recreo</span></button>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:14px;overflow:hidden">
+<button class="btn b-ind" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('cal')"><span>📅</span><span>Calendario</span></button>
+<button class="btn" style="background:linear-gradient(135deg,#8B5CF6,#A855F7);box-shadow:0 5px 0 #4C1D95;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="showProg()"><span>📊</span><span>Progreso</span></button>
+<button class="btn" style="background:linear-gradient(135deg,#F59E0B,#F97316);box-shadow:0 5px 0 #78350F;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="launchQuick()"><span>⚡</span><span>Repaso</span></button>
+<button class="btn b-org" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('recreo')"><span>🎉</span><span>Recreo</span></button>
 </div>
-${state.achievements?.length>0?`<div class="card" style="padding:12px 14px;margin-bottom:10px"><div style="font-size:12px;font-weight:800;color:#5B21B6;margin-bottom:7px">🏆 Mis logros</div><div style="display:flex;gap:6px;flex-wrap:wrap">${LOGROS.filter(l=>state.achievements?.includes(l.id)).map(l=>`<div title="${l.name}: ${l.desc}" style="background:rgba(109,40,217,.2);border:1.5px solid rgba(139,92,246,.3);border-radius:50px;padding:4px 10px;font-size:11px;font-weight:700;color:#5B21B6">${l.ic} ${l.name}</div>`).join('')}</div></div>`:''}
-<button class="back-btn btn" onclick="go('welcome')">← Cambiar alumno</button>
+${state.achievements?.length>0?`<div class="card" style="padding:12px 14px;margin-bottom:10px"><div style="font-size:12px;font-weight:800;color:#A78BFA;margin-bottom:7px">🏆 Mis logros</div><div style="display:flex;gap:6px;flex-wrap:wrap">${LOGROS.filter(l=>state.achievements?.includes(l.id)).map(l=>`<div title="${l.name}: ${l.desc}" style="background:rgba(109,40,217,.2);border:1.5px solid rgba(139,92,246,.3);border-radius:50px;padding:4px 10px;font-size:11px;font-weight:700;color:#C4B5FD">${l.ic} ${l.name}</div>`).join('')}</div></div>`:''}
 </div></div>`;}
 
 // ── DICCIONARIO ────────────────────────────────────────
