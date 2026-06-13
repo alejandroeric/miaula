@@ -308,7 +308,9 @@ El campo "type" DEBE contener la clasificación gramatical real de la palabra (e
 
 // ── SUBJECT ────────────────────────────────────────────
 function vSubject(){
-  const s=state.subj,tl=(state.topics[s.id]||[]),kl=(state.tasks[s.id]||[]);
+  const s=state.subj;
+  const sortByDate=(arr)=>[...arr].sort((a,b)=>(a.isoDate||a.date||'').localeCompare(b.isoDate||b.date||''));
+  const tl=sortByDate(state.topics[s.id]||[]),kl=sortByDate(state.tasks[s.id]||[]);
   const showT=state.subjTab!=='tasks';
   const tItems=showT?(tl.length?tl.map((t,i)=>{
     const done=state.topicProgress?.[`${s.id}_${i}`]||0;
@@ -809,7 +811,8 @@ state.students.map(s=>`<div style="display:flex;align-items:center;gap:12px;padd
     const pStu=state.pStudent||state.students[0]?.id;
     const stu=state.students.find(x=>x.id===pStu)||state.students[0];
     const aS=getAllSubjs().find(x=>x.id===(state.pSubj||'matematica'))||getAllSubjs()[0];
-    const stuTopics=stu?stu.topics[aS.id]||[]:[]; 
+    const sortByDate=(arr)=>[...arr].sort((a,b)=>(a.isoDate||a.date||'').localeCompare(b.isoDate||b.date||''));
+    const stuTopics=stu?sortByDate(stu.topics[aS.id]||[]):[];
     body=`<div class="card" style="border-left:5px solid ${aS.cl}">
 <div class="ftit" style="font-size:16px;margin-bottom:10px">📚 Cargar Temas</div>
 ${state.students.length>1?`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:5px">Alumno/a:</div><div style="display:flex;gap:6px;flex-wrap:wrap">${state.students.map(s=>`<button class="btn b-sm ${pStu===s.id?'':'inactive'}" style="${pStu===s.id?'background:#7C3AED;box-shadow:0 3px 0 #4C1D95;color:white':''}" onclick="setPStudent(${s.id})">${s.avatar||'🌟'} ${s.name}</button>`).join('')}</div></div>`:''}
@@ -833,7 +836,7 @@ ${stuTopics.length?stuTopics.map((t,i)=>`<div style="display:flex;justify-conten
     const pStu=state.pStudent||state.students[0]?.id;
     const stu=state.students.find(x=>x.id===pStu)||state.students[0];
     const aS=getAllSubjs().find(x=>x.id===(state.pSubj||'matematica'))||getAllSubjs()[0];
-    const stuTasks=stu?stu.tasks[aS.id]||[]:[]; 
+    const stuTasks=stu?sortByDate(stu.tasks[aS.id]||[]):[]; 
     body=`<div class="card" style="border-left:5px solid #6366F1">
 <div class="ftit" style="font-size:16px;margin-bottom:10px">📝 Cargar Tareas</div>
 ${state.students.length>1?`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:5px">Alumno/a:</div><div style="display:flex;gap:6px;flex-wrap:wrap">${state.students.map(s=>`<button class="btn b-sm ${pStu===s.id?'':'inactive'}" style="${pStu===s.id?'background:#7C3AED;box-shadow:0 3px 0 #4C1D95;color:white':''}" onclick="setPStudent(${s.id})">${s.avatar||'🌟'} ${s.name}</button>`).join('')}</div></div>`:''}
