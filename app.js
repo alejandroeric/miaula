@@ -258,7 +258,24 @@ ${state.streak>0?`<div style="background:rgba(255,255,255,.2);border-radius:50px
 <button class="btn" style="background:linear-gradient(135deg,#F59E0B,#F97316);box-shadow:0 5px 0 #78350F;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="launchQuick()"><span>⚡</span><span>Repaso</span></button>
 <button class="btn b-org" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('recreo')"><span>🎉</span><span>Recreo</span></button>
 </div>
-${state.achievements?.length>0?`<div class="card" style="padding:12px 14px;margin-bottom:10px"><div style="font-size:12px;font-weight:800;color:#A78BFA;margin-bottom:7px">🏆 Mis logros</div><div style="display:flex;gap:6px;flex-wrap:wrap">${LOGROS.filter(l=>state.achievements?.includes(l.id)).map(l=>`<div title="${l.name}: ${l.desc}" style="background:rgba(109,40,217,.2);border:1.5px solid rgba(139,92,246,.3);border-radius:50px;padding:4px 10px;font-size:11px;font-weight:700;color:#C4B5FD">${l.ic} ${l.name}</div>`).join('')}</div></div>`:''}
+${getNivelHtml()}
+<div class="card" style="padding:12px 14px;margin-bottom:10px">
+  ${(()=>{
+    const desbloqueadas=LOGROS.filter(l=>state.achievements?.includes(l.id));
+    const restantes=LOGROS.length-desbloqueadas.length;
+    return`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:800;color:#A78BFA">🏆 Mis medallas</div>
+      ${restantes>0?`<div style="font-size:10px;font-weight:700;color:#6B7280">${restantes} por desbloquear 🔒</div>`:'<div style="font-size:10px;font-weight:800;color:#FCD34D">¡Colección completa! 🎉</div>'}
+    </div>
+    ${desbloqueadas.length?`<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+      ${desbloqueadas.map(l=>`<div title="${l.name}: ${l.desc}" style="text-align:center;padding:8px 4px;border-radius:14px;border:1.5px solid rgba(139,92,246,.5);background:rgba(109,40,217,.25);position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);animation:shi 2.5s ease infinite"></div>
+        <div style="font-size:22px">${l.ic}</div>
+        <div style="font-size:9px;font-weight:800;color:#C4B5FD;margin-top:3px;line-height:1.2">${l.name}</div>
+      </div>`).join('')}
+    </div>`:`<div style="text-align:center;padding:12px;color:#6B7280;font-size:12px;font-weight:700">¡Completá ejercicios para ganar medallas!</div>`}`;
+  })()}
+</div>
 </div></div>`;}
 
 // ── DICCIONARIO ────────────────────────────────────────
@@ -810,6 +827,39 @@ function showProg(){
   div.innerHTML=`<div style="background:#1A0A2E;border-radius:24px;padding:24px;max-width:340px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,.7),0 0 0 1px rgba(139,92,246,.4);border:1px solid rgba(139,92,246,.5);animation:pop .3s ease"><div style="font-family:'Fredoka One';font-size:22px;color:#E9D5FF;margin-bottom:4px;text-align:center">📊 Progreso de ${s?.name||''}</div><div style="display:flex;justify-content:center;margin-bottom:16px">${starsHtml()}</div>${html}<button class="btn b-vio" style="width:100%;margin-top:6px" onclick="document.getElementById('progModal').remove()">✅ Cerrar</button></div>`;
   document.body.appendChild(div);}
 
+// ── NIVELES ─────────────────────────────────────────────
+const NIVELES=[
+  {min:0,  max:20,  ic:'🌱',titulo:'Aprendiz',      color:'#6EE7B7',sh:'#065F46'},
+  {min:21, max:50,  ic:'📚',titulo:'Estudiante',     color:'#93C5FD',sh:'#1E40AF'},
+  {min:51, max:100, ic:'🌟',titulo:'Exploradora',    color:'#FCD34D',sh:'#78350F'},
+  {min:101,max:200, ic:'🦋',titulo:'Sabia',          color:'#C084FC',sh:'#4C1D95'},
+  {min:201,max:999, ic:'👑',titulo:'Maestra',        color:'#F9A8D4',sh:'#831843'},
+];
+function getNivel(stars){return NIVELES.find(n=>stars>=n.min&&stars<=n.max)||NIVELES[0];}
+function getNivelHtml(){
+  const stars=state.stars||0;
+  const niv=getNivel(stars);
+  const next=NIVELES.find(n=>n.min>stars);
+  const pct=next?Math.round(((stars-niv.min)/(next.min-niv.min))*100):100;
+  return`<div class="card" style="padding:14px 16px;margin-bottom:10px;border-top:3px solid ${niv.color}">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <div style="font-size:32px;animation:bou 2s infinite">${niv.ic}</div>
+    <div>
+      <div style="font-size:10px;font-weight:800;color:#A78BFA;text-transform:uppercase;letter-spacing:1px">Nivel actual</div>
+      <div style="font-family:'Fredoka One';font-size:20px;background:linear-gradient(90deg,${niv.color},#fff,${niv.color});background-size:200%;animation:shi 3s ease infinite;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${niv.titulo}</div>
+    </div>
+    <div style="margin-left:auto;text-align:right">
+      <div style="font-size:10px;color:#A78BFA;font-weight:700">${next?`Siguiente: ${next.ic} ${next.titulo}`:' ¡Nivel máximo!'}</div>
+      <div style="font-size:11px;color:#E9D5FF;font-weight:800">⭐ ${stars}${next?` / ${next.min}`:''}</div>
+    </div>
+  </div>
+  <div style="background:rgba(255,255,255,.1);border-radius:50px;height:10px;overflow:hidden">
+    <div style="background:linear-gradient(90deg,${niv.color},#fff);height:100%;width:${pct}%;border-radius:50px;transition:width .8s ease;box-shadow:0 0 8px ${niv.color}88"></div>
+  </div>
+  ${pct>0?`<div style="font-size:10px;color:#A78BFA;margin-top:4px;font-weight:700;text-align:right">${pct}% completado</div>`:''}
+</div>`;
+}
+
 // ── ACHIEVEMENTS & PROGRESS ────────────────────────────
 const LOGROS=[
   {id:'first',ic:'🌟',name:'¡Primera estrella!',desc:'Ganaste tu primera estrella',check:()=>state.stars>=1},
@@ -832,9 +882,12 @@ function checkAchievements(){
   });
 }
 function showAchievement(logro){
-  const d=document.createElement('div');d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#7C3AED,#A855F7);color:white;padding:14px 22px;border-radius:18px;font-family:Nunito,sans-serif;font-weight:800;font-size:14px;z-index:99999;box-shadow:0 8px 28px rgba(109,40,217,.5);text-align:center;animation:fadeUp .4s ease';
-  d.innerHTML=`<div style="font-size:28px;margin-bottom:4px">${logro.ic}</div><div>🏆 ¡Logro desbloqueado!</div><div style="font-size:12px;opacity:.9;margin-top:2px">${logro.name}</div>`;
-  document.body.appendChild(d);setTimeout(()=>d.remove(),3500);
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;top:24px;left:50%;transform:translateX(-50%) scale(.8);background:linear-gradient(135deg,#4C1D95,#7C3AED,#A855F7);color:white;padding:16px 24px;border-radius:20px;font-family:Nunito,sans-serif;font-weight:800;font-size:14px;z-index:99999;box-shadow:0 8px 32px rgba(109,40,217,.7),0 0 0 1px rgba(255,255,255,.15);text-align:center;transition:transform .3s ease,opacity .3s ease;opacity:0;min-width:200px';
+  d.innerHTML=`<div style="font-size:36px;margin-bottom:6px;animation:bou .6s ease infinite">${logro.ic}</div><div style="font-size:11px;opacity:.8;text-transform:uppercase;letter-spacing:1px">🏆 ¡Medalla desbloqueada!</div><div style="font-size:15px;margin-top:4px">${logro.name}</div><div style="font-size:11px;opacity:.75;margin-top:2px">${logro.desc}</div>`;
+  document.body.appendChild(d);
+  requestAnimationFrame(()=>{d.style.transform='translateX(-50%) scale(1)';d.style.opacity='1';});
+  setTimeout(()=>{d.style.transform='translateX(-50%) scale(.8)';d.style.opacity='0';setTimeout(()=>d.remove(),300);},3500);
 }
 function markTopicDone(subjId,idx){
   if(!state.topicProgress)state.topicProgress={};
