@@ -38,7 +38,8 @@ let state={
   editingStudent:null,pEditTab:'list',
   sopaGrid:[],sopaWordList:[],sopaFound:[],sopaStart:null,sopaLoading:false,
   cruciGrid:[],cruciClues:{across:[],down:[]},cruciNums:{},cruciAnswers:{},cruciChecked:false,cruciLoading:false,
-  dicResult:null,dicHistory:[],loadingDic:false
+  dicResult:null,dicHistory:[],loadingDic:false,
+  bibTab:'todos',bibSelected:null,bibAiResult:'',bibLoading:false
 };
 
 // ── STORAGE ────────────────────────────────────────────
@@ -176,6 +177,7 @@ function getView(){
     case'task':return vTask();case'chat':return vChat();
     case'quickReview':return vQuickReview();case'recreo':return vRecreo();
     case'cal':return vCal();case'parent':return vParent();
+    case'biblioteca':return vBiblioteca();
     default:return vWelcome();
   }
 }
@@ -259,11 +261,12 @@ ${state.streak>0?`<div style="background:rgba(255,255,255,.2);border-radius:50px
 </div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px" class="subj-grid">${rows}</div>
 ${idiomaRows}
-<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:14px;overflow:hidden">
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-bottom:14px;overflow:hidden">
 <button class="btn b-ind" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('cal')"><span>📅</span><span>Calendario</span></button>
 <button class="btn" style="background:linear-gradient(135deg,#8B5CF6,#A855F7);box-shadow:0 5px 0 #4C1D95;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="showProg()"><span>📊</span><span>Progreso</span></button>
 <button class="btn" style="background:linear-gradient(135deg,#F59E0B,#F97316);box-shadow:0 5px 0 #78350F;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="launchQuick()"><span>⚡</span><span>Repaso</span></button>
 <button class="btn b-org" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('recreo')"><span>🎉</span><span>Recreo</span></button>
+<button class="btn" style="background:linear-gradient(135deg,#0E7490,#0891B2);box-shadow:0 5px 0 #164E63;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('biblioteca')"><span>📖</span><span>Biblio</span></button>
 </div>
 ${getNivelHtml()}
 <div class="card" style="padding:12px 14px;margin-bottom:10px">
@@ -610,6 +613,111 @@ function vCal(){
   const RE=ev=>{const s=ev.subjectId&&sm[ev.subjectId]?sm[ev.subjectId]:{cl:'#7C3AED',bg:'#EDE9FE',bd:'#C4B5FD',ic:'📌',n:'General'};const d=new Date(ev.date+'T12:00:00'),iT=ev.date===ts,iS=ev.date>ts&&ev.date<=i7s;return`<div class="card" style="border-left:5px solid ${s.cl};background:${iT?s.bg:iS?'#FFFBEB':'rgba(255,255,255,.97)'}"><div style="display:flex;justify-content:space-between;gap:10px"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">${s.ic}<span style="font-size:11px;font-weight:800;color:${s.cl}">${s.n}</span>${iT?`<span style="background:#7C3AED;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:50px">¡HOY!</span>`:''}${iS?`<span style="background:#F59E0B;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:50px">⏰ Esta semana</span>`:''}</div><div style="font-weight:800;font-size:14px;color:#E9D5FF">${ev.title}</div>${ev.desc?`<div style="font-size:12px;color:#A78BFA;margin-top:2px">${ev.desc}</div>`:''}</div><div style="background:${s.bg};border:1.5px solid ${s.bd};border-radius:11px;padding:6px 9px;text-align:center;min-width:46px;flex-shrink:0"><div style="font-family:'Fredoka One';font-size:22px;color:${s.cl};line-height:1">${d.getDate()}</div><div style="font-size:10px;color:${s.cl};font-weight:800;text-transform:uppercase">${d.toLocaleDateString('es-AR',{month:'short'})}</div></div></div></div>`;};
   return`<div class="page"><div class="wrap"><button class="back-btn btn" onclick="go('student')">← Volver</button><div class="hdr" style="background:linear-gradient(135deg,#6366F1,#7C3AED);box-shadow:0 8px 28px rgba(99,102,241,.35)"><div style="font-size:46px">📅</div><h1>Calendario</h1><p style="text-transform:capitalize">${td.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p></div>${!cal.length?`<div class="card" style="text-align:center;padding:40px"><div style="font-size:46px">📆</div><p style="color:#7C3AED;font-size:15px;margin-top:10px;font-weight:700">No hay eventos aún</p></div>`:''}${up.length?`<p style="font-family:'Fredoka One';font-size:18px;color:#5B21B6;margin-bottom:10px">📌 Próximas fechas</p>${up.map(RE).join('')}`:''}${pa.length?`<div style="margin-top:15px;opacity:.55"><p style="font-family:'Fredoka One';font-size:14px;color:#7C3AED;margin-bottom:8px">✓ Anteriores</p>${pa.map(RE).join('')}</div>`:''}</div></div>`;}
 
+// ── BIBLIOTECA ─────────────────────────────────────────
+function vBiblioteca(){
+  const subjs=getAllSubjs();
+  // Juntar todos los temas que tienen contenido (photoContent o desc)
+  const materiales=[];
+  subjs.forEach(s=>{
+    (state.topics[s.id]||[]).forEach((t,i)=>{
+      const contenido=t.photoContent||t.desc||'';
+      if(contenido.trim().length>20){
+        materiales.push({subj:s,topic:t,idx:i,contenido});
+      }
+    });
+  });
+
+  const bibTab=state.bibTab||'todos';
+  const subjsFiltro=subjs.filter(s=>(state.topics[s.id]||[]).some(t=>(t.photoContent||t.desc||'').trim().length>20));
+  const tabs=`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px">
+    <button class="btn b-sm ${bibTab==='todos'?'':'inactive'}" style="${bibTab==='todos'?'background:#0E7490;box-shadow:0 3px 0 #164E63;color:white':''}" onclick="state.bibTab='todos';render()">🌟 Todo</button>
+    ${subjsFiltro.map(s=>`<button class="btn b-sm ${bibTab===s.id?'':'inactive'}" style="${bibTab===s.id?`background:${s.cl};box-shadow:0 3px 0 ${s.sh};color:white`:''}" onclick="state.bibTab='${s.id}';render()">${s.ic} ${s.n}</button>`).join('')}
+  </div>`;
+
+  const filtrados=bibTab==='todos'?materiales:materiales.filter(m=>m.subj.id===bibTab);
+
+  const selMat=state.bibSelected;
+  if(selMat!==null&&selMat!==undefined&&filtrados[selMat]){
+    const m=filtrados[selMat];
+    const palabras=m.contenido.trim().split(/\s+/).length;
+    return`<div class="page"><div class="wrap">
+<button class="back-btn btn" onclick="state.bibSelected=null;render()">← Volver</button>
+<div class="hdr" style="background:linear-gradient(135deg,${m.subj.cl},${m.subj.bd});box-shadow:0 8px 28px rgba(0,0,0,.2)">
+  <div style="font-size:36px">${m.subj.ic}</div>
+  <h1 style="font-size:18px">${m.topic.title}</h1>
+  <p style="font-size:12px;opacity:.85">${m.subj.n} · ${m.topic.date} · ~${palabras} palabras</p>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+  <button class="btn" style="background:linear-gradient(135deg,#0E7490,#0891B2);box-shadow:0 4px 0 #164E63;color:white;border-radius:10px;padding:9px 14px;font-size:12px" onclick="speakBib(${selMat})">🔊 Escuchar</button>
+  <button class="btn" style="background:linear-gradient(135deg,#7C3AED,#A855F7);box-shadow:0 4px 0 #4C1D95;color:white;border-radius:10px;padding:9px 14px;font-size:12px" onclick="resumirBib(${selMat})">✨ Resumir con IA</button>
+  <button onclick="window.speechSynthesis.cancel()" style="background:none;border:1.5px solid rgba(139,92,246,.3);color:#A78BFA;border-radius:10px;padding:9px 12px;font-size:12px;cursor:pointer">⏹ Parar</button>
+</div>
+${state.bibAiResult?`<div class="card" style="border-left:4px solid #7C3AED;margin-bottom:12px;white-space:pre-wrap;line-height:1.7;font-size:13px;color:#E9D5FF">${state.bibAiResult}</div>`:''}
+${state.bibLoading?`<div class="card" style="text-align:center;padding:20px">${spin('Generando...')}</div>`:''}
+<div class="card" style="padding:16px;line-height:1.9;font-size:14px;color:#E9D5FF;white-space:pre-wrap;max-height:60vh;overflow-y:auto">${m.contenido}</div>
+</div></div>`;
+  }
+
+  return`<div class="page"><div class="wrap">
+<button class="back-btn btn" onclick="go('student')">← Volver</button>
+<div class="hdr" style="background:linear-gradient(135deg,#0E7490,#0891B2);box-shadow:0 8px 28px rgba(14,116,144,.3)">
+  <div style="font-size:46px">📖</div>
+  <h1>Biblioteca</h1>
+  <p style="font-size:13px">Materiales cargados</p>
+</div>
+${tabs}
+${filtrados.length===0?`<div class="card" style="text-align:center;padding:40px">
+  <div style="font-size:46px;margin-bottom:10px">📭</div>
+  <p style="color:#7C3AED;font-weight:700">No hay materiales en esta categoría</p>
+  <p style="color:#A78BFA;font-size:13px;margin-top:6px">Cargá un PDF o foto desde Panel Mamá/Papá → Temas</p>
+</div>`:filtrados.map((m,i)=>{
+  const palabras=m.contenido.trim().split(/\s+/).length;
+  const preview=m.contenido.replace(/\[Página \d+\]/g,'').trim().substring(0,120);
+  return`<div class="card" style="border-left:4px solid ${m.subj.cl};padding:14px 16px;margin-bottom:10px;cursor:pointer" onclick="state.bibSelected=${i};state.bibAiResult='';state.bibLoading=false;render()">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+  <span style="font-size:20px">${m.subj.ic}</span>
+  <div>
+    <div style="font-weight:800;font-size:14px;color:#E9D5FF">${m.topic.title}</div>
+    <div style="font-size:11px;color:#A78BFA">${m.subj.n} · ${m.topic.date} · ~${palabras} palabras</div>
+  </div>
+</div>
+<div style="font-size:12px;color:#C4B5FD;line-height:1.5">${preview}...</div>
+</div>`;}).join('')}
+</div></div>`;}
+
+function speakBib(idx){
+  const filtrados=getBibFiltrados();
+  if(!filtrados[idx])return;
+  window.speechSynthesis.cancel();
+  const textoLimpio=filtrados[idx].contenido.replace(/\[Página \d+\]/g,' ').replace(/---[^-]*---/g,' ').replace(/\s{2,}/g,' ').trim();
+  const utt=new SpeechSynthesisUtterance(textoLimpio);
+  utt.lang='es-AR';utt.rate=0.9;
+  window.speechSynthesis.speak(utt);
+}
+
+function getBibFiltrados(){
+  const bibTab=state.bibTab||'todos';
+  const materiales=[];
+  getAllSubjs().forEach(s=>{
+    (state.topics[s.id]||[]).forEach((t,i)=>{
+      const contenido=t.photoContent||t.desc||'';
+      if(contenido.trim().length>20)materiales.push({subj:s,topic:t,idx:i,contenido});
+    });
+  });
+  return bibTab==='todos'?materiales:materiales.filter(m=>m.subj.id===bibTab);
+}
+
+async function resumirBib(idx){
+  const filtrados=getBibFiltrados();
+  if(!filtrados[idx])return;
+  state.bibLoading=true;state.bibAiResult='';render();
+  const m=filtrados[idx];
+  const r=await ai([{role:'user',content:`Resumí este material de ${m.subj.n} llamado "${m.topic.title}":\n\n${m.contenido.substring(0,3000)}`}],
+  `Maestra didáctica para ${gradeStr()}. Hacé un resumen claro con los conceptos más importantes, usando bullet points y emojis. En español.`,800);
+  state.bibLoading=false;state.bibAiResult=r;render();
+}
+
+
 // ── PARENT ─────────────────────────────────────────────
 function vParent(){
   if(!state.parentAuthed)return vParentLogin();
@@ -712,6 +820,7 @@ ${state.students.length>1?`<div style="margin-bottom:10px"><div style="font-size
 <div style="display:flex;gap:7px;margin-bottom:11px;flex-wrap:wrap;align-items:center">
 <button class="btn" style="background:${aS.cl};box-shadow:0 5px 0 ${aS.sh};border-radius:11px;padding:9px 18px;font-size:13px;color:white" onclick="addTopic()">➕ Agregar</button>
 <label style="display:inline-flex"><input type="file" accept="image/*" multiple style="display:none" onchange="photoTopic(this)"><button type="button" class="btn b-vio" style="border-radius:10px;padding:9px 13px;font-size:12px" onclick="this.parentElement.querySelector('input').click()">📷 Foto (1 o más)</button></label>
+<label style="display:inline-flex"><input type="file" accept=".pdf" style="display:none" onchange="pdfTopic(this)"><button type="button" class="btn" style="background:linear-gradient(135deg,#DC2626,#EF4444);box-shadow:0 5px 0 #7F1D1D;color:white;border-radius:10px;padding:9px 13px;font-size:12px" onclick="this.parentElement.querySelector('input').click()">📄 PDF</button></label>
 </div>
 <p style="font-weight:800;font-size:13px;color:${aS.cl};margin-bottom:7px">Temas en ${aS.n}${stu?` (${stu.name})`:''}: </p>
 ${stuTopics.length?stuTopics.map((t,i)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:9px 12px;background:${aS.bg};border-radius:11px;margin-bottom:6px;border:1.5px solid ${aS.bd}">
@@ -751,6 +860,7 @@ ${state.students.length>1?`<div style="margin-bottom:10px"><div style="font-size
 <div style="display:flex;gap:7px;margin-bottom:11px;flex-wrap:wrap;align-items:center">
 <button class="btn b-ind" style="border-radius:11px;padding:9px 18px;font-size:13px" onclick="addTask()">➕ Agregar tarea</button>
 <label style="display:inline-flex"><input type="file" accept="image/*" multiple style="display:none" onchange="photoTask(this)"><button type="button" class="btn b-vio" style="border-radius:10px;padding:9px 13px;font-size:12px" onclick="this.parentElement.querySelector('input').click()">📷 Foto (1 o más)</button></label>
+<label style="display:inline-flex"><input type="file" accept=".pdf" style="display:none" onchange="pdfTask(this)"><button type="button" class="btn" style="background:linear-gradient(135deg,#DC2626,#EF4444);box-shadow:0 5px 0 #7F1D1D;color:white;border-radius:10px;padding:9px 13px;font-size:12px" onclick="this.parentElement.querySelector('input').click()">📄 PDF</button></label>
 </div>
 <p style="font-weight:800;font-size:13px;color:#6366F1;margin-bottom:7px">Tareas en ${aS.n}${stu?` (${stu.name})`:''}: </p>
 ${stuTasks.length?stuTasks.map(t=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:9px 12px;background:rgba(109,40,217,.25);border-radius:11px;margin-bottom:6px;border:1.5px solid #C4B5FD">
@@ -825,13 +935,13 @@ ${CUSTOM_SUBJS.map(s=>`<div style="display:flex;align-items:center;justify-conte
 
 <div style="background:rgba(109,40,217,.15);border:1.5px solid rgba(139,92,246,.3);border-radius:14px;padding:14px;margin-top:6px">
 <div style="font-size:14px;font-weight:800;color:#C4B5FD;margin-bottom:12px">➕ Agregar materia</div>
-<input class="inp" id="newSubjName" placeholder="Nombre de la materia *" style="margin-bottom:10px">
+<input class="inp" id="newSubjName" placeholder="Nombre de la materia *" style="margin-bottom:10px" value="${state._newSubjName||''}">
 
 <div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:6px">Ícono:</div>
-<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${ICONOS.map(ic=>`<button onclick="state._newSubjIc='${ic}';render()" style="font-size:22px;background:${selIc===ic?'rgba(139,92,246,.4)':'rgba(255,255,255,.08)'};border:2px solid ${selIc===ic?'#7C3AED':'rgba(139,92,246,.2)'};border-radius:8px;padding:4px 8px;cursor:pointer">${ic}</button>`).join('')}</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${ICONOS.map(ic=>`<button onclick="state._newSubjName=document.getElementById('newSubjName')?.value||'';state._newSubjIc='${ic}';render()" style="font-size:22px;background:${selIc===ic?'rgba(139,92,246,.4)':'rgba(255,255,255,.08)'};border:2px solid ${selIc===ic?'#7C3AED':'rgba(139,92,246,.2)'};border-radius:8px;padding:4px 8px;cursor:pointer">${ic}</button>`).join('')}</div>
 
 <div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:6px">Color:</div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${PALETAS.map((p,i)=>`<button onclick="state._newSubjPal=${i};render()" style="background:${p.bg};border:2.5px solid ${selPal===i?p.cl:p.bd};border-radius:50px;padding:5px 14px;font-size:12px;font-weight:700;color:${p.cl};cursor:pointer;box-shadow:${selPal===i?`0 3px 0 ${p.sh}`:'none'}">${p.n}</button>`).join('')}</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${PALETAS.map((p,i)=>`<button onclick="state._newSubjName=document.getElementById('newSubjName')?.value||'';state._newSubjPal=${i};render()" style="background:${p.bg};border:2.5px solid ${selPal===i?p.cl:p.bd};border-radius:50px;padding:5px 14px;font-size:12px;font-weight:700;color:${p.cl};cursor:pointer;box-shadow:${selPal===i?`0 3px 0 ${p.sh}`:'none'}">${p.n}</button>`).join('')}</div>
 
 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:rgba(255,255,255,.05);border:1.5px solid rgba(139,92,246,.2);border-radius:10px;padding:10px 14px;margin-bottom:12px">
 <input type="checkbox" id="newSubjIdioma" style="width:18px;height:18px;accent-color:#7C3AED">
@@ -1058,7 +1168,7 @@ function selectStudent(id){
 function goSubj(id){state.subj=getAllSubjs().find(s=>s.id===id);state.subjTab='topics';state.view='subject';render();}
 
 function addCustomSubj(){
-  const name=(document.getElementById('newSubjName')?.value||'').trim();
+  const name=(document.getElementById('newSubjName')?.value||state._newSubjName||'').trim();
   if(!name){showToast('Escribí el nombre de la materia','#EF4444');return;}
   const PALETAS=[
     {cl:'#6D28D9',bg:'#EDE9FE',bd:'#C4B5FD',sh:'#4C1D95'},
@@ -1087,7 +1197,7 @@ function addCustomSubj(){
   if(!state.topics[id])state.topics[id]=[];
   if(!state.tasks[id])state.tasks[id]=[];
   ss('edu_students',state.students);
-  state._newSubjPal=0;state._newSubjIc=ICONOS[0];
+  state._newSubjPal=0;state._newSubjIc=ICONOS[0];state._newSubjName='';
   showToast(`¡Materia "${name}" agregada!`,'#059669');
   render();
 }
@@ -1185,14 +1295,18 @@ async function deleteStudent(id){
 
 // ── TOPICS/TASKS MANAGEMENT ────────────────────────────
 async function addTopic(){
-  const t=document.getElementById('topicTitle')?.value?.trim();if(!t)return;
+  const t=document.getElementById('topicTitle')?.value?.trim();
+  if(!t){showToast('Escribí el título del tema','#EF4444');return;}
   const d=document.getElementById('topicDesc')?.value||'',dt=document.getElementById('topicDate')?.value||today();
-  const pStu=state.pStudent||state.students[0]?.id,aS=state.pSubj||'matematica';
-  const idx=state.students.findIndex(s=>s.id===pStu);if(idx<0)return;
+  const pStuRaw=state.pStudent||state.students[0]?.id;
+  const pStu=typeof pStuRaw==='string'?parseInt(pStuRaw):pStuRaw;
+  const aS=state.pSubj||'matematica';
+  const idx=state.students.findIndex(s=>s.id===pStu||s.id===pStuRaw);
+  if(idx<0){showToast('No se encontró el alumno','#EF4444');return;}
   if(!state.students[idx].topics)state.students[idx].topics=ET();
   if(!state.students[idx].topics[aS])state.students[idx].topics[aS]=[];
   state.students[idx].topics[aS].push({title:t,photoContent:d.trim(),desc:d.trim().substring(0,120),isoDate:dt,date:fmtD(dt)});
-  if(state.activeStudent?.id===pStu){state.activeStudent=state.students[idx];state.topics={...state.topics,...state.students[idx].topics};}
+  if(state.activeStudent?.id===pStu||state.activeStudent?.id===pStuRaw){state.activeStudent=state.students[idx];state.topics={...state.topics,...state.students[idx].topics};}
   await ss('edu_students',state.students);render();}
 
 async function delTopic(stuId,subjId,i){
@@ -1202,11 +1316,15 @@ async function delTopic(stuId,subjId,i){
   await ss('edu_students',state.students);render();}
 
 async function addTask(){
-  const t=document.getElementById('taskTitle')?.value?.trim();if(!t)return;
+  const t=document.getElementById('taskTitle')?.value?.trim();
+  if(!t){showToast('Escribí el título de la tarea','#EF4444');return;}
   const c=document.getElementById('taskDesc')?.value||'',dt=document.getElementById('taskDate')?.value||today();
   const isExam=document.querySelector('input[name="taskType"]:checked')?.value==='prueba';
-  const pStu=state.pStudent||state.students[0]?.id,aS=state.pSubj||'matematica';
-  const idx=state.students.findIndex(s=>s.id===pStu);if(idx<0)return;
+  const pStuRaw=state.pStudent||state.students[0]?.id;
+  const pStu=typeof pStuRaw==='string'?parseInt(pStuRaw):pStuRaw;
+  const aS=state.pSubj||'matematica';
+  const idx=state.students.findIndex(s=>s.id===pStu||s.id===pStuRaw);
+  if(idx<0){showToast('No se encontró el alumno','#EF4444');return;}
   if(!state.students[idx].tasks)state.students[idx].tasks=ET();
   if(!state.students[idx].tasks[aS])state.students[idx].tasks[aS]=[];
   state.students[idx].tasks[aS].push({id:Date.now(),title:t,content:c.trim(),isoDate:dt,date:fmtD(dt),isExam:isExam||false});
@@ -1269,6 +1387,49 @@ async function analyzePhotos(files,prompt){
     }
   }
   return results.join('\n\n');
+}
+
+async function pdfToText(file){
+  if(typeof pdfjsLib==='undefined')throw new Error('PDF.js no cargó');
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const ab=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+  const pages=[];
+  for(let i=1;i<=pdf.numPages;i++){
+    const page=await pdf.getPage(i);
+    const tc=await page.getTextContent();
+    const txt=tc.items.map(it=>it.str).join(' ').replace(/\s+/g,' ').trim();
+    if(txt)pages.push(`[Página ${i}]\n${txt}`);
+  }
+  return pages.join('\n\n');
+}
+
+async function pdfTopic(inp){
+  const file=inp.files[0];if(!file)return;inp.value='';
+  showToast('🔄 Leyendo PDF...','#7C3AED');
+  try{
+    const txt=await pdfToText(file);
+    if(!txt.trim()){showToast('El PDF no tiene texto legible','#EF4444');return;}
+    const tt=document.getElementById('topicTitle');
+    const td2=document.getElementById('topicDesc');
+    if(tt&&!tt.value)tt.value=file.name.replace('.pdf','').substring(0,60);
+    if(td2)td2.value=txt.substring(0,3000);
+    showToast('✅ PDF cargado!','#059669');
+  }catch(e){showToast('Error al leer el PDF: '+e.message,'#EF4444');}
+}
+
+async function pdfTask(inp){
+  const file=inp.files[0];if(!file)return;inp.value='';
+  showToast('🔄 Leyendo PDF...','#7C3AED');
+  try{
+    const txt=await pdfToText(file);
+    if(!txt.trim()){showToast('El PDF no tiene texto legible','#EF4444');return;}
+    const kt=document.getElementById('taskTitle');
+    const kd=document.getElementById('taskDesc');
+    if(kt&&!kt.value)kt.value=file.name.replace('.pdf','').substring(0,60);
+    if(kd)kd.value=txt.substring(0,3000);
+    showToast('✅ PDF cargado!','#059669');
+  }catch(e){showToast('Error al leer el PDF: '+e.message,'#EF4444');}
 }
 
 async function photoTopic(inp){
@@ -1506,12 +1667,18 @@ async function genEx(){
     const usedHint=(state.usedExercises||[]).length>0?`\n${isIngles?'Avoid repeating':'Evitá repetir'}: ${state.usedExercises.slice(-4).join(' | ')}`:'';
     const p=isIngles?`Create 5 multiple-choice questions STRICTLY about "${state.topic.title}" IN ${langName.toUpperCase()}.${usedHint}`
       :`Creá 5 preguntas de múltiple opción sobre "${state.topic.title}" de ${state.subj.n}.${usedHint}`;
-    const sys=isIngles?`${langName} teacher for ${gradeStr()}. 5 MC questions in ${langName} about "${state.topic.title}". ${diffHintEn} EXACT format:
+    const sys=isIngles?`${langName} teacher for ${gradeStr()}. 5 MC questions in ${langName} about "${state.topic.title}". ${diffHintEn} EXACT format (each option on its own line):
 Q1: [question]
-A) opt  B) opt  C) opt  D) opt
-[Answer: B]`:`Maestra ${gradeStr()}. 5 preguntas MC sobre "${state.topic.title}". ${diffHintEs} Formato EXACTO:
+A) option
+B) option
+C) option
+D) option
+[Answer: B]`:`Maestra ${gradeStr()}. 5 preguntas MC sobre "${state.topic.title}". ${diffHintEs} Formato EXACTO (cada opción en su propia línea):
 P1: [pregunta]
-A) opción  B) opción  C) opción  D) opción
+A) opción
+B) opción
+C) opción
+D) opción
 [Respuesta: B]`;
     const r=await ai([{role:'user',content:p}],sys,700);
     const blocks=r.split(/(?:Q|P)\d+:/i).filter(b=>b.trim().length>5);
@@ -1534,19 +1701,38 @@ A) opción  B) opción  C) opción  D) opción
     const usedHint=(state.usedExercises||[]).length>0?`\n${isIngles?'Avoid repeating':'Evitá repetir'}: ${state.usedExercises.slice(-4).join(' | ')}`:'';
     const p=isIngles?`Create 5 True/False statements STRICTLY about "${state.topic.title}" IN ${langName.toUpperCase()}.${usedHint}`
       :`Creá 5 afirmaciones verdaderas o falsas sobre "${state.topic.title}" de ${state.subj.n}. Mezclar V y F.${usedHint}`;
-    const sys=isIngles?`${langName} teacher for ${gradeStr()}. 5 True/False statements about "${state.topic.title}". Mix true and false. ${diffHintEn} Format:
-1. [statement] [Answer: True]
-2. [statement] [Answer: False]`:`Maestra ${gradeStr()}. 5 afirmaciones sobre "${state.topic.title}". Mezclar verdaderas y falsas. ${diffHintEs} Formato:
-1. [afirmación] [Respuesta: Verdadero]
-2. [afirmación] [Respuesta: Falso]`;
+    const sys=isIngles?`${langName} teacher for ${gradeStr()}. Output ONLY 5 numbered lines, NO intro, NO title, NO greetings. EXACT format:
+1. [statement] — True
+2. [statement] — False
+Mix true and false. ${diffHintEn}`:`Maestra ${gradeStr()}. Escribí SOLO 5 líneas numeradas, SIN introducción, SIN título, SIN saludos. Formato EXACTO:
+1. [afirmación] — Verdadero
+2. [afirmación] — Falso
+Mezclar verdadero y falso. ${diffHintEs}`;
     const r=await ai([{role:'user',content:p}],sys,500);
-    const lines=r.split('\n').filter(l=>/^\d+\./.test(l.trim()));
-    const items=lines.map(l=>{
-      const am=l.match(/\[(?:Respuesta|Answer):\s*(Verdadero|Falso|True|False)\]/i);
-      const correct=am?/verdadero|true/i.test(am[1]):true;
-      const stmt=l.replace(/^\d+\.\s*/,'').replace(/\[(?:Respuesta|Answer):[^\]]*\]/i,'').trim();
-      return stmt.length>3?{stmt,correct}:null;
-    }).filter(Boolean).slice(0,5);
+    // Parser flexible: acepta [Answer: True], (True), — True, etc.
+    const allLines=r.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+    const items=[];
+    for(const l of allLines){
+      if(!/^\d+[\.\)]/.test(l))continue;
+      // Buscar la respuesta en cualquier formato
+      const inBracket=l.match(/\[(?:Respuesta|Answer|R):\s*(Verdadero|Falso|True|False)\]/i);
+      const inParen=l.match(/\(\s*(Verdadero|Falso|True|False)\s*\)/i);
+      const atEnd=l.match(/[-–—]\s*(Verdadero|Falso|True|False)\.?\s*$/i);
+      const afterColon=l.match(/:\s*(Verdadero|Falso|True|False)\.?\s*$/i);
+      const bare=l.match(/\b(Verdadero|Falso|True|False)\.?\s*$/i);
+      const match=inBracket||inParen||atEnd||afterColon||bare;
+      if(!match)continue;
+      const correct=/verdadero|true/i.test(match[1]);
+      const stmt=l
+        .replace(/^\d+[\.\)]\s*/,'')
+        .replace(/\[(?:Respuesta|Answer|R):[^\]]*\]/i,'')
+        .replace(/\(\s*(?:Verdadero|Falso|True|False)\s*\)/i,'')
+        .replace(/[-–—]\s*(?:Verdadero|Falso|True|False)\s*$/i,'')
+        .replace(/:\s*(?:Verdadero|Falso|True|False)\s*$/i,'')
+        .trim();
+      if(stmt.length>3)items.push({stmt,correct});
+      if(items.length===5)break;
+    }
     items.forEach(it=>{if(it.stmt)state.usedExercises.push(it.stmt.substring(0,60));});
     state.exFormatData=items;state.vofAnswers={};state.vofChecked=false;
     state.exBatch+=5;state.loadingEx=false;render();return;
