@@ -5,12 +5,15 @@
   {id:'naturales',n:'Cs. Naturales',ic:'🌿',cl:'#166534',bg:'#DCFCE7',bd:'#86EFAC',sh:'#14532D'},
   {id:'ingles',n:'Inglés',ic:'⭐',cl:'#C2410C',bg:'#FEF3C7',bd:'#FCD34D',sh:'#7C2D12'},
 ];
+let CUSTOM_SUBJS=(()=>{try{return JSON.parse(localStorage.getItem('miAula_customSubjs')||'[]');}catch{return[];}})();
+function getAllSubjs(){return[...SUBJS,...CUSTOM_SUBJS];}
+function saveCustomSubjs(){localStorage.setItem('miAula_customSubjs',JSON.stringify(CUSTOM_SUBJS));}
 const GRADES=['1°','2°','3°','4°','5°','6°','7°'];
 const COURSES=['A','B','C','D','E','F'];
 const PROVINCES=['Buenos Aires','Catamarca','Chaco','Chubut','Córdoba','Corrientes','Entre Ríos','Formosa','Jujuy','La Pampa','La Rioja','Mendoza','Misiones','Neuquén','Río Negro','Salta','San Juan','San Luis','Santa Cruz','Santa Fe','Santiago del Estero','Tierra del Fuego','Tucumán','CABA'];
 const AVATARS=['🌟','🦋','🐱','🐶','🦊','🐸','🦁','🐼','🌈','🎀','🚀','🎨','🌺','🦄','🐬','🍀'];
 const PIN0='1234';
-const ET=()=>({matematica:[],lengua:[],sociales:[],naturales:[],ingles:[]});
+const ET=()=>{const o={};getAllSubjs().forEach(s=>{o[s.id]=[];});return o;};
 const newStudent=()=>({id:Date.now(),name:'',grade:'3',course:'A',school:'',province:'Tucumán',avatar:'🌟',age:8,gender:'F',teacher:'',notes:'',stars:0,topics:ET(),tasks:ET(),
   // Datos personales para IA
   pets:'',family:'',neighborhood:'',team:'',favFood:'',favShow:'',hobby:'',extraData:''});
@@ -178,7 +181,7 @@ function getView(){
 }
 function spin(m='Pensando...'){return`<div class="spin-wrap"><div class="spin-emoji">⭐</div><p style="color:#C4B5FD;margin-top:7px;font-weight:700">${m}</p></div>`;}
 function rtxt(t){return(t||'').split('\n').filter(l=>l.trim()).map(l=>`<p style="margin-bottom:9px;line-height:1.85;font-size:15px;color:#E9D5FF">${l.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</p>`).join('');}
-function subjTabs(active,fn){return SUBJS.map(s=>`<button class="btn b-sm ${active===s.id?'':'inactive'}" style="${active===s.id?`background:${s.cl};box-shadow:0 3px 0 ${s.sh};color:white`:''}" onclick="${fn}('${s.id}')">${s.ic} ${s.n}</button>`).join('');}
+function subjTabs(active,fn){return getAllSubjs().map(s=>`<button class="btn b-sm ${active===s.id?'':'inactive'}" style="${active===s.id?`background:${s.cl};box-shadow:0 3px 0 ${s.sh};color:white`:''}" onclick="${fn}('${s.id}')">${s.ic} ${s.n}</button>`).join('');}
 function starsHtml(){return`<div class="stars-bar"><span>⭐</span><span>${state.stars}</span></div>`;}
 function parseEx(raw){
   let parts=raw.split(/\n?\[(?:Respuesta|Answer):\s*/i);
@@ -226,7 +229,10 @@ function vStudent(){
   const i7=new Date(td);i7.setDate(i7.getDate()+7);const i7s=i7.toISOString().split('T')[0];
   const al=(state.calendar||[]).filter(e=>e.date>=ts&&e.date<=i7s).sort((a,b)=>a.date.localeCompare(b.date));
   const alertH=al.length?`<div class="alert-bar"><div style="font-weight:800;font-size:13px;color:white;margin-bottom:4px">⏰ ¡Eventos próximos esta semana!</div>${al.map(e=>`<div style="color:white;font-size:12px;margin-top:2px">📅 ${fmtD(e.date)} — ${e.title}</div>`).join('')}</div>`:'';
-  const rows=SUBJS.slice(0,4).map(sub=>{
+  const allSubjsNow=getAllSubjs();
+  const gridSubjs=allSubjsNow.filter(s=>s.id!=='ingles'&&!s.isIdioma);
+  const idiomaSubjs=allSubjsNow.filter(s=>s.id==='ingles'||s.isIdioma);
+  const rows=gridSubjs.map(sub=>{
     const cnt=(state.topics[sub.id]||[]).length;
     const done=(state.topics[sub.id]||[]).filter((_,i)=>state.topicProgress?.[`${sub.id}_${i}`]).length;
     const pct=cnt>0?Math.round(done/cnt*100):0;
@@ -236,7 +242,9 @@ function vStudent(){
 ${cnt>0?`<div style="font-size:10px;color:${sub.cl};margin-top:3px;font-weight:700">${done}/${cnt} temas</div>
 <div style="background:rgba(255,255,255,.6);border-radius:50px;height:4px;margin-top:3px;overflow:hidden"><div style="background:${sub.cl};height:100%;width:${pct}%;border-radius:50px;transition:width .6s ease"></div></div>`:''}
 </div>`;}).join('');
-  const en=SUBJS[4];const ecnt=(state.topics[en.id]||[]).length;
+  const idiomaRows=idiomaSubjs.map(en=>{const ecnt=(state.topics[en.id]||[]).length;return`<div class="subj-card" style="background:linear-gradient(145deg,${en.bg},white);border-color:${en.bd};border:2.5px solid ${en.bd};display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;box-shadow:0 5px 0 ${en.sh}28" onclick="goSubj('${en.id}')">
+<div style="font-size:28px">${en.ic}</div><div><div style="font-family:'Fredoka One';font-size:18px;color:${en.cl}">${en.n}</div>${ecnt>0?`<div style="font-size:10px;color:${en.cl};font-weight:700">${ecnt} tema${ecnt>1?'s':''}</div>`:''}</div></div>`;}).join('');
+  const en=idiomaSubjs[0]||allSubjsNow[4]||allSubjsNow[0];const ecnt=(state.topics[en.id]||[]).length;
   return`<div class="page" style="overflow-x:hidden"><div class="wrap">
 ${alertH}
 <button class="back-btn btn" onclick="go('welcome')" style="margin-bottom:12px">← Cambiar alumno</button>
@@ -250,8 +258,7 @@ ${starsHtml()}
 ${state.streak>0?`<div style="background:rgba(255,255,255,.2);border-radius:50px;padding:5px 12px;display:inline-flex;align-items:center;gap:5px;font-weight:800;font-size:13px;color:white">🔥 ${state.streak} día${state.streak>1?'s':''}</div>`:''}
 </div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px" class="subj-grid">${rows}</div>
-<div class="subj-card" style="background:linear-gradient(145deg,${en.bg},white);border-color:${en.bd};border:2.5px solid ${en.bd};display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;box-shadow:0 5px 0 ${en.sh}28" onclick="goSubj('${en.id}')">
-<div style="font-size:28px">${en.ic}</div><div><div style="font-family:'Fredoka One';font-size:18px;color:${en.cl}">${en.n}</div>${ecnt>0?`<div style="font-size:10px;color:${en.cl};font-weight:700">${ecnt} tema${ecnt>1?'s':''}</div>`:''}</div></div>
+${idiomaRows}
 <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:14px;overflow:hidden">
 <button class="btn b-ind" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('cal')"><span>📅</span><span>Calendario</span></button>
 <button class="btn" style="background:linear-gradient(135deg,#8B5CF6,#A855F7);box-shadow:0 5px 0 #4C1D95;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="showProg()"><span>📊</span><span>Progreso</span></button>
@@ -361,7 +368,7 @@ ${isLen?`<button class="tab btn ${showDic?'active':'inactive'}" style="${showDic
 
 // ── TOPIC ──────────────────────────────────────────────
 function vTopic(){
-  const s=state.subj,tp=state.topic,isEn=s.id==='ingles';
+  const s=state.subj,tp=state.topic,isEn=s.id==='ingles'||!!s.isIdioma;
   const tab=state.engTab||'ej';
   const tabs=isEn?`<div class="tab-row">${['ej','dict','fon'].map((k,i)=>{const ls=['🏋️ Ejercicios','🎧 Dictado','🔊 Fonética'][i];return`<button class="tab btn ${tab===k?'active':'inactive'}" style="${tab===k?`background:${s.cl};box-shadow:0 4px 0 ${s.sh};color:white`:''}" onclick="setEngTab('${k}')">${ls}</button>`;}).join('')}</div>`:'';
   let content='';
@@ -597,7 +604,7 @@ ${state.feedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #
 // ── CALENDARIO ─────────────────────────────────────────
 function vCal(){
   const td=new Date(),ts=today(),i7=new Date(td);i7.setDate(i7.getDate()+7);const i7s=i7.toISOString().split('T')[0];
-  const sm=Object.fromEntries(SUBJS.map(s=>[s.id,s]));
+  const sm=Object.fromEntries(getAllSubjs().map(s=>[s.id,s]));
   const cal=[...state.calendar].sort((a,b)=>a.date.localeCompare(b.date));
   const up=cal.filter(e=>e.date>=ts),pa=cal.filter(e=>e.date<ts).reverse();
   const RE=ev=>{const s=ev.subjectId&&sm[ev.subjectId]?sm[ev.subjectId]:{cl:'#7C3AED',bg:'#EDE9FE',bd:'#C4B5FD',ic:'📌',n:'General'};const d=new Date(ev.date+'T12:00:00'),iT=ev.date===ts,iS=ev.date>ts&&ev.date<=i7s;return`<div class="card" style="border-left:5px solid ${s.cl};background:${iT?s.bg:iS?'#FFFBEB':'rgba(255,255,255,.97)'}"><div style="display:flex;justify-content:space-between;gap:10px"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">${s.ic}<span style="font-size:11px;font-weight:800;color:${s.cl}">${s.n}</span>${iT?`<span style="background:#7C3AED;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:50px">¡HOY!</span>`:''}${iS?`<span style="background:#F59E0B;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:50px">⏰ Esta semana</span>`:''}</div><div style="font-weight:800;font-size:14px;color:#E9D5FF">${ev.title}</div>${ev.desc?`<div style="font-size:12px;color:#A78BFA;margin-top:2px">${ev.desc}</div>`:''}</div><div style="background:${s.bg};border:1.5px solid ${s.bd};border-radius:11px;padding:6px 9px;text-align:center;min-width:46px;flex-shrink:0"><div style="font-family:'Fredoka One';font-size:22px;color:${s.cl};line-height:1">${d.getDate()}</div><div style="font-size:10px;color:${s.cl};font-weight:800;text-transform:uppercase">${d.toLocaleDateString('es-AR',{month:'short'})}</div></div></div></div>`;};
@@ -607,7 +614,7 @@ function vCal(){
 function vParent(){
   if(!state.parentAuthed)return vParentLogin();
   const tab=state.parentTab||'alumnos';
-  const PT=[{id:'alumnos',l:'👥 Alumnos'},{id:'temas',l:'📚 Temas'},{id:'tareas',l:'📝 Tareas'},{id:'cal',l:'📅 Cal.'},{id:'res',l:'📊 Resumen'},{id:'config',l:'⚙️ Config'}];
+  const PT=[{id:'alumnos',l:'👥 Alumnos'},{id:'temas',l:'📚 Temas'},{id:'tareas',l:'📝 Tareas'},{id:'cal',l:'📅 Cal.'},{id:'res',l:'📊 Resumen'},{id:'materias',l:'🎓 Materias'},{id:'config',l:'⚙️ Config'}];
   const tabs=`<div style="display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap">${PT.map(t=>`<button class="tab btn ${tab===t.id?'active':'inactive'}" style="${tab===t.id?`background:linear-gradient(135deg,#7C3AED,#6366F1);box-shadow:0 4px 0 #312E81;color:white`:''};font-size:11px;flex:none;padding:7px 10px" onclick="setPTab('${t.id}')">${t.l}</button>`).join('')}</div>`;
   let body='';
 
@@ -693,7 +700,7 @@ state.students.map(s=>`<div style="display:flex;align-items:center;gap:12px;padd
   if(tab==='temas'){
     const pStu=state.pStudent||state.students[0]?.id;
     const stu=state.students.find(x=>x.id===pStu)||state.students[0];
-    const aS=SUBJS.find(x=>x.id===(state.pSubj||'matematica'))||SUBJS[0];
+    const aS=getAllSubjs().find(x=>x.id===(state.pSubj||'matematica'))||getAllSubjs()[0];
     const stuTopics=stu?stu.topics[aS.id]||[]:[]; 
     body=`<div class="card" style="border-left:5px solid ${aS.cl}">
 <div class="ftit" style="font-size:16px;margin-bottom:10px">📚 Cargar Temas</div>
@@ -716,7 +723,7 @@ ${stuTopics.length?stuTopics.map((t,i)=>`<div style="display:flex;justify-conten
   if(tab==='tareas'){
     const pStu=state.pStudent||state.students[0]?.id;
     const stu=state.students.find(x=>x.id===pStu)||state.students[0];
-    const aS=SUBJS.find(x=>x.id===(state.pSubj||'matematica'))||SUBJS[0];
+    const aS=getAllSubjs().find(x=>x.id===(state.pSubj||'matematica'))||getAllSubjs()[0];
     const stuTasks=stu?stu.tasks[aS.id]||[]:[]; 
     body=`<div class="card" style="border-left:5px solid #6366F1">
 <div class="ftit" style="font-size:16px;margin-bottom:10px">📝 Cargar Tareas</div>
@@ -753,11 +760,11 @@ ${stuTasks.length?stuTasks.map(t=>`<div style="display:flex;justify-content:spac
 
   // ── TAB: CALENDARIO ──
   if(tab==='cal'){
-    const sm=Object.fromEntries(SUBJS.map(s=>[s.id,s]));
+    const sm=Object.fromEntries(getAllSubjs().map(s=>[s.id,s]));
     body=`<div class="card" style="border-left:5px solid #6366F1">
 <div class="ftit" style="font-size:16px;margin-bottom:12px">📅 Eventos</div>
 <input type="date" class="inp" id="evDate">
-<select class="sel" id="evSubj"><option value="">📌 General</option>${SUBJS.map(s=>`<option value="${s.id}">${s.ic} ${s.n}</option>`).join('')}</select>
+<select class="sel" id="evSubj"><option value="">📌 General</option>${getAllSubjs().map(s=>`<option value="${s.id}">${s.ic} ${s.n}</option>`).join('')}</select>
 <input class="inp" id="evTitle" placeholder="Título *">
 <input class="inp" id="evDesc" placeholder="Descripción (opcional)">
 <button class="btn b-ind" style="margin-bottom:14px" onclick="addEvent()">📌 Agregar evento</button>
@@ -773,7 +780,7 @@ ${state.calendar.length?[...state.calendar].sort((a,b)=>a.date.localeCompare(b.d
     body=`<div class="card" style="border-left:5px solid #A855F7">
 <div class="ftit" style="font-size:16px;margin-bottom:12px">📊 Resumen / Examen Trimestral</div>
 ${state.students.length>1?`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:5px">Alumno/a:</div><div style="display:flex;gap:6px;flex-wrap:wrap">${state.students.map(s=>`<button class="btn b-sm ${pStu===s.id?'':'inactive'}" style="${pStu===s.id?'background:#7C3AED;box-shadow:0 3px 0 #4C1D95;color:white':''}" onclick="setPStudent(${s.id})">${s.avatar||'🌟'} ${s.name}</button>`).join('')}</div></div>`:''}
-<select class="sel" id="resSubj"><option value="all">🌟 Todas las materias</option>${SUBJS.map(s=>`<option value="${s.id}">${s.ic} ${s.n}</option>`).join('')}</select>
+<select class="sel" id="resSubj"><option value="all">🌟 Todas las materias</option>${getAllSubjs().map(s=>`<option value="${s.id}">${s.ic} ${s.n}</option>`).join('')}</select>
 <div class="date-row"><label>📅 Desde:</label><input type="date" class="inp" id="resFrom"></div>
 <div class="date-row"><label>📅 Hasta:</label><input type="date" class="inp" id="resTo"></div>
 <p style="font-size:11px;color:#A78BFA;margin-bottom:11px;font-style:italic">💡 Sin fechas: usa todo el período cargado</p>
@@ -783,6 +790,56 @@ ${state.students.length>1?`<div style="margin-bottom:10px"><div style="font-size
 </div>
 ${state.loadingResume?spin('Generando...'):''}
 ${state.resumeResult?`<div style="background:rgba(109,40,217,.2);border:1.5px solid rgba(139,92,246,.3);border-radius:14px;padding:14px;white-space:pre-wrap;line-height:1.7;font-size:12px;color:#E9D5FF;max-height:380px;overflow-y:auto;margin-bottom:9px">${state.resumeResult}</div><button class="btn b-ind" style="font-size:12px" onclick="xpdf('Resumen Trimestral','Todas las materias',state.resumeResult,[])">📄 PDF</button>`:''}
+</div>`;}
+
+  // ── TAB: MATERIAS ──
+  if(tab==='materias'){
+    const PALETAS=[
+      {cl:'#6D28D9',bg:'#EDE9FE',bd:'#C4B5FD',sh:'#4C1D95',n:'Violeta'},
+      {cl:'#0E7490',bg:'#CFFAFE',bd:'#67E8F9',sh:'#164E63',n:'Cyan'},
+      {cl:'#A16207',bg:'#FEF9C3',bd:'#FDE047',sh:'#713F12',n:'Amarillo'},
+      {cl:'#B91C1C',bg:'#FEE2E2',bd:'#FCA5A5',sh:'#7F1D1D',n:'Rojo'},
+      {cl:'#0F766E',bg:'#CCFBF1',bd:'#5EEAD4',sh:'#134E4A',n:'Verde agua'},
+      {cl:'#3730A3',bg:'#E0E7FF',bd:'#A5B4FC',sh:'#1E1B4B',n:'Índigo'},
+      {cl:'#92400E',bg:'#FEF3C7',bd:'#FCD34D',sh:'#451A03',n:'Naranja'},
+      {cl:'#831843',bg:'#FCE7F3',bd:'#F9A8D4',sh:'#500724',n:'Rosa'},
+    ];
+    const ICONOS=['🎯','🎨','🎭','🔬','🏛️','🗺️','💻','🎵','⚗️','🧮','📐','🌍','🏃','🎸','🧬','🌐'];
+    const selPal=state._newSubjPal||0;
+    const selIc=state._newSubjIc||ICONOS[0];
+    body=`<div class="card" style="border-left:5px solid #7C3AED">
+<div style="font-family:'Fredoka One';font-size:18px;color:#5B21B6;margin-bottom:14px">🎓 Materias personalizadas</div>
+
+<div style="margin-bottom:16px">
+<div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:6px">Materias predeterminadas (no se pueden eliminar):</div>
+${SUBJS.map(s=>`<div style="display:inline-flex;align-items:center;gap:6px;background:${s.bg};border:1.5px solid ${s.bd};border-radius:50px;padding:5px 12px;margin:3px;font-size:13px;font-weight:700;color:${s.cl}">${s.ic} ${s.n}</div>`).join('')}
+</div>
+
+${CUSTOM_SUBJS.length?`<div style="margin-bottom:16px">
+<div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:6px">Materias agregadas:</div>
+${CUSTOM_SUBJS.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;background:${s.bg};border:1.5px solid ${s.bd};border-radius:12px;padding:10px 14px;margin-bottom:7px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px">${s.ic}</span><div><div style="font-weight:800;font-size:14px;color:${s.cl}">${s.n}</div><div style="font-size:11px;color:${s.cl};opacity:.8">${s.isIdioma?'🗣️ Idioma (funciones avanzadas)':'📚 Materia general'}</div></div></div>
+<button onclick="deleteCustomSubj('${s.id}')" style="background:none;border:1.5px solid #FCA5A5;color:#EF4444;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800;cursor:pointer">🗑️ Eliminar</button>
+</div>`).join('')}
+</div>`:''}
+
+<div style="background:rgba(109,40,217,.15);border:1.5px solid rgba(139,92,246,.3);border-radius:14px;padding:14px;margin-top:6px">
+<div style="font-size:14px;font-weight:800;color:#C4B5FD;margin-bottom:12px">➕ Agregar materia</div>
+<input class="inp" id="newSubjName" placeholder="Nombre de la materia *" style="margin-bottom:10px">
+
+<div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:6px">Ícono:</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${ICONOS.map(ic=>`<button onclick="state._newSubjIc='${ic}';render()" style="font-size:22px;background:${selIc===ic?'rgba(139,92,246,.4)':'rgba(255,255,255,.08)'};border:2px solid ${selIc===ic?'#7C3AED':'rgba(139,92,246,.2)'};border-radius:8px;padding:4px 8px;cursor:pointer">${ic}</button>`).join('')}</div>
+
+<div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:6px">Color:</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${PALETAS.map((p,i)=>`<button onclick="state._newSubjPal=${i};render()" style="background:${p.bg};border:2.5px solid ${selPal===i?p.cl:p.bd};border-radius:50px;padding:5px 14px;font-size:12px;font-weight:700;color:${p.cl};cursor:pointer;box-shadow:${selPal===i?`0 3px 0 ${p.sh}`:'none'}">${p.n}</button>`).join('')}</div>
+
+<label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:rgba(255,255,255,.05);border:1.5px solid rgba(139,92,246,.2);border-radius:10px;padding:10px 14px;margin-bottom:12px">
+<input type="checkbox" id="newSubjIdioma" style="width:18px;height:18px;accent-color:#7C3AED">
+<div><div style="font-size:13px;font-weight:700;color:#E9D5FF">🗣️ Es un idioma</div><div style="font-size:11px;color:#A78BFA">Activa ejercicios, dictado y fonética en ese idioma</div></div>
+</label>
+
+<button class="btn b-vio" style="width:100%;border-radius:12px;padding:12px;font-size:14px" onclick="addCustomSubj()">➕ Agregar materia</button>
+</div>
 </div>`;}
 
   // ── TAB: CONFIG ──
@@ -822,7 +879,7 @@ function vParentLogin(){
 // ── PROGRESS MODAL ─────────────────────────────────────
 function showProg(){
   const s=state.activeStudent;
-  const html=SUBJS.map(sub=>{const tc=(state.topics[sub.id]||[]).length,tk=(state.tasks[sub.id]||[]).length,pct=Math.min(100,tc*20);return`<div style="margin-bottom:14px;background:rgba(255,255,255,.05);border-radius:12px;padding:10px 12px;border:1px solid rgba(139,92,246,.2)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="display:flex;align-items:center;gap:6px"><span>${sub.ic}</span><span style="font-weight:800;font-size:13px;color:#E9D5FF">${sub.n}</span></div><span style="font-size:11px;color:#A78BFA;font-weight:700">${tc} tema${tc!==1?'s':''} · ${tk} tarea${tk!==1?'s':''}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:linear-gradient(135deg,#7C3AED,#C084FC)"></div></div></div>`;}).join('');
+  const html=getAllSubjs().map(sub=>{const tc=(state.topics[sub.id]||[]).length,tk=(state.tasks[sub.id]||[]).length,pct=Math.min(100,tc*20);return`<div style="margin-bottom:14px;background:rgba(255,255,255,.05);border-radius:12px;padding:10px 12px;border:1px solid rgba(139,92,246,.2)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="display:flex;align-items:center;gap:6px"><span>${sub.ic}</span><span style="font-weight:800;font-size:13px;color:#E9D5FF">${sub.n}</span></div><span style="font-size:11px;color:#A78BFA;font-weight:700">${tc} tema${tc!==1?'s':''} · ${tk} tarea${tk!==1?'s':''}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:linear-gradient(135deg,#7C3AED,#C084FC)"></div></div></div>`;}).join('');
   const div=document.createElement('div');div.id='progModal';div.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,4,20,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:8888;display:flex;align-items:center;justify-content:center';
   div.innerHTML=`<div style="background:#1A0A2E;border-radius:24px;padding:24px;max-width:340px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,.7),0 0 0 1px rgba(139,92,246,.4);border:1px solid rgba(139,92,246,.5);animation:pop .3s ease"><div style="font-family:'Fredoka One';font-size:22px;color:#E9D5FF;margin-bottom:4px;text-align:center">📊 Progreso de ${s?.name||''}</div><div style="display:flex;justify-content:center;margin-bottom:16px">${starsHtml()}</div>${html}<button class="btn b-vio" style="width:100%;margin-top:6px" onclick="document.getElementById('progModal').remove()">✅ Cerrar</button></div>`;
   document.body.appendChild(div);}
@@ -870,7 +927,7 @@ const LOGROS=[
   {id:'streak30',ic:'🚀',name:'Un mes de campeón',desc:'30 días de racha increíble',check:()=>state.streak>=30},
   {id:'topics5',ic:'📚',name:'5 temas practicados',desc:'Practicaste 5 temas distintos',check:()=>Object.values(state.topicProgress||{}).length>=5},
   {id:'perfect',ic:'💎',name:'¡Perfecto!',desc:'Completaste un ejercicio perfecto',check:()=>state.achievements?.includes('perfect')},
-  {id:'allsubj',ic:'🌈',name:'Todo terreno',desc:'Practicaste todas las materias',check:()=>SUBJS.every(s=>(state.topics[s.id]||[]).some((_,i)=>state.topicProgress?.[`${s.id}_${i}`]))},
+  {id:'allsubj',ic:'🌈',name:'Todo terreno',desc:'Practicaste todas las materias',check:()=>getAllSubjs().every(s=>(state.topics[s.id]||[]).some((_,i)=>state.topicProgress?.[`${s.id}_${i}`]))},
 ];
 function checkAchievements(){
   if(!state.achievements)state.achievements=[];
@@ -900,7 +957,7 @@ async function startQuickReview(){
   state.quickAnswers={};state.quickResults=null;state.loadingQuick=true;
   // Juntar temas por materia, priorizando practicados
   const temasxMateria={};
-  SUBJS.forEach(s=>{
+  getAllSubjs().forEach(s=>{
     const practicados=(state.topics[s.id]||[]).filter((t,i)=>state.topicProgress?.[`${s.id}_${i}`]);
     const todos=state.topics[s.id]||[];
     const lista=practicados.length?practicados:todos;
@@ -946,7 +1003,7 @@ ${items.map((it,i)=>`<div style="background:${state.quickResults[i]?'#ECFDF5':'#
   const cur=items[idx];
   const qNorm=cur.q.replace(/_{3,}/g,'[__]').replace(/\.{3,}/g,'[__]');
   const qHtml=qNorm.replace(/\[__\]/g,`<input id="qrInp" value="${(state.quickAnswers[idx]||'').replace(/"/g,'&quot;')}" oninput="state.quickAnswers[${idx}]=this.value" placeholder=" ? " class="inp-pill" style="width:130px;margin:0 5px;vertical-align:middle">`);
-  const subjData=SUBJS.find(s=>s.n===cur.materia);
+  const subjData=getAllSubjs().find(s=>s.n===cur.materia);
   return`<div class="page"><div class="wrap">
 <button class="back-btn btn" onclick="go('student')">← Salir</button>
 <div class="hdr" style="background:linear-gradient(135deg,#F59E0B,#F97316);box-shadow:0 6px 20px rgba(245,158,11,.4)">
@@ -998,7 +1055,55 @@ function selectStudent(id){
   state.chatMsgs=[];state.exParsed=[];state.answers={};state.exResults=null;state.explanation='';state.feedback='';
   go('student');}
 
-function goSubj(id){state.subj=SUBJS.find(s=>s.id===id);state.subjTab='topics';state.view='subject';render();}
+function goSubj(id){state.subj=getAllSubjs().find(s=>s.id===id);state.subjTab='topics';state.view='subject';render();}
+
+function addCustomSubj(){
+  const name=(document.getElementById('newSubjName')?.value||'').trim();
+  if(!name){showToast('Escribí el nombre de la materia','#EF4444');return;}
+  const PALETAS=[
+    {cl:'#6D28D9',bg:'#EDE9FE',bd:'#C4B5FD',sh:'#4C1D95'},
+    {cl:'#0E7490',bg:'#CFFAFE',bd:'#67E8F9',sh:'#164E63'},
+    {cl:'#A16207',bg:'#FEF9C3',bd:'#FDE047',sh:'#713F12'},
+    {cl:'#B91C1C',bg:'#FEE2E2',bd:'#FCA5A5',sh:'#7F1D1D'},
+    {cl:'#0F766E',bg:'#CCFBF1',bd:'#5EEAD4',sh:'#134E4A'},
+    {cl:'#3730A3',bg:'#E0E7FF',bd:'#A5B4FC',sh:'#1E1B4B'},
+    {cl:'#92400E',bg:'#FEF3C7',bd:'#FCD34D',sh:'#451A03'},
+    {cl:'#831843',bg:'#FCE7F3',bd:'#F9A8D4',sh:'#500724'},
+  ];
+  const ICONOS=['🎯','🎨','🎭','🔬','🏛️','🗺️','💻','🎵','⚗️','🧮','📐','🌍','🏃','🎸','🧬','🌐'];
+  const pal=PALETAS[state._newSubjPal||0];
+  const ic=state._newSubjIc||ICONOS[0];
+  const isIdioma=document.getElementById('newSubjIdioma')?.checked||false;
+  const id='custom_'+Date.now();
+  const nueva={id,n:name,ic,isIdioma,...pal};
+  CUSTOM_SUBJS.push(nueva);
+  saveCustomSubjs();
+  // Migrar alumnos existentes: agregar clave vacía en topics y tasks
+  state.students.forEach(stu=>{
+    if(!stu.topics[id])stu.topics[id]=[];
+    if(!stu.tasks[id])stu.tasks[id]=[];
+  });
+  // Migrar state actual
+  if(!state.topics[id])state.topics[id]=[];
+  if(!state.tasks[id])state.tasks[id]=[];
+  ss('edu_students',state.students);
+  state._newSubjPal=0;state._newSubjIc=ICONOS[0];
+  showToast(`¡Materia "${name}" agregada!`,'#059669');
+  render();
+}
+
+function deleteCustomSubj(id){
+  const sub=CUSTOM_SUBJS.find(s=>s.id===id);
+  if(!sub)return;
+  if(!confirm(`¿Eliminar la materia "${sub.n}"? Se borrarán todos sus temas y tareas en todos los alumnos.`))return;
+  CUSTOM_SUBJS=CUSTOM_SUBJS.filter(s=>s.id!==id);
+  saveCustomSubjs();
+  state.students.forEach(stu=>{delete stu.topics[id];delete stu.tasks[id];});
+  delete state.topics[id];delete state.tasks[id];
+  ss('edu_students',state.students);
+  showToast(`Materia eliminada`,'#7C3AED');
+  render();
+}
 
 function launchQuick(){state.view='quickReview';state.quickItems=[];state.quickIdx=0;state.quickAnswers={};state.quickResults=null;render();startQuickReview();}
 
@@ -1389,7 +1494,8 @@ Ejercicio X:
 
 async function genEx(){
   state.loadingEx=true;render();
-  const isIngles=state.subj.id==='ingles';
+  const isIngles=state.subj.id==='ingles'||!!state.subj.isIdioma;
+  const langName=state.subj.n||'Inglés';
   const fmt=state.exFormat||'completar';
 
   // ── MÚLTIPLE OPCIÓN ──
@@ -1398,9 +1504,9 @@ async function genEx(){
   const diffHintEn=diff===0?'Beginner level — simple and direct questions.':diff<=2?'Intermediate level — questions with more context, less obvious options.':'Advanced level — conceptually richer questions, similar-looking options to challenge the student.';
   if(fmt==='multiple'){
     const usedHint=(state.usedExercises||[]).length>0?`\n${isIngles?'Avoid repeating':'Evitá repetir'}: ${state.usedExercises.slice(-4).join(' | ')}`:'';
-    const p=isIngles?`Create 5 multiple-choice questions STRICTLY about "${state.topic.title}" IN ENGLISH.${usedHint}`
+    const p=isIngles?`Create 5 multiple-choice questions STRICTLY about "${state.topic.title}" IN ${langName.toUpperCase()}.${usedHint}`
       :`Creá 5 preguntas de múltiple opción sobre "${state.topic.title}" de ${state.subj.n}.${usedHint}`;
-    const sys=isIngles?`English teacher for ${gradeStr()}. 5 MC questions in English about "${state.topic.title}". ${diffHintEn} EXACT format:
+    const sys=isIngles?`${langName} teacher for ${gradeStr()}. 5 MC questions in ${langName} about "${state.topic.title}". ${diffHintEn} EXACT format:
 Q1: [question]
 A) opt  B) opt  C) opt  D) opt
 [Answer: B]`:`Maestra ${gradeStr()}. 5 preguntas MC sobre "${state.topic.title}". ${diffHintEs} Formato EXACTO:
@@ -1426,9 +1532,9 @@ A) opción  B) opción  C) opción  D) opción
   // ── VERDADERO O FALSO ──
   if(fmt==='vof'){
     const usedHint=(state.usedExercises||[]).length>0?`\n${isIngles?'Avoid repeating':'Evitá repetir'}: ${state.usedExercises.slice(-4).join(' | ')}`:'';
-    const p=isIngles?`Create 5 True/False statements STRICTLY about "${state.topic.title}" IN ENGLISH.${usedHint}`
+    const p=isIngles?`Create 5 True/False statements STRICTLY about "${state.topic.title}" IN ${langName.toUpperCase()}.${usedHint}`
       :`Creá 5 afirmaciones verdaderas o falsas sobre "${state.topic.title}" de ${state.subj.n}. Mezclar V y F.${usedHint}`;
-    const sys=isIngles?`English teacher for ${gradeStr()}. 5 True/False statements about "${state.topic.title}". Mix true and false. ${diffHintEn} Format:
+    const sys=isIngles?`${langName} teacher for ${gradeStr()}. 5 True/False statements about "${state.topic.title}". Mix true and false. ${diffHintEn} Format:
 1. [statement] [Answer: True]
 2. [statement] [Answer: False]`:`Maestra ${gradeStr()}. 5 afirmaciones sobre "${state.topic.title}". Mezclar verdaderas y falsas. ${diffHintEs} Formato:
 1. [afirmación] [Respuesta: Verdadero]
@@ -1464,9 +1570,9 @@ A) opción  B) opción  C) opción  D) opción
   const usedHint=state.usedExercises.length>0?`\n${isIngles?'AVOID repeating these already-used exercise themes':'EVITÁ repetir estos temas ya usados'}: ${state.usedExercises.slice(-6).join(' | ')}`:'';
   let prompt,sys;
   if(isIngles){
-    prompt=`Create 3 exercises STRICTLY about "${state.topic.title}" in English. Type: ${tipos[lote]}${usedHint}`;
-    sys=`English teacher for ${gradeStr()}. ${diffHintEn} ABSOLUTE RULES — never break them:
-1. Write ALL exercises IN ENGLISH. No Spanish in questions or instructions.
+    prompt=`Create 3 exercises STRICTLY about "${state.topic.title}" in ${langName}. Type: ${tipos[lote]}${usedHint}`;
+    sys=`${langName} teacher for ${gradeStr()}. ${diffHintEn} ABSOLUTE RULES — never break them:
+1. Write ALL exercises IN ${langName.toUpperCase()}. No Spanish in questions or instructions.
 2. ALL exercises MUST be exclusively about "${state.topic.title}". Do NOT switch to another English topic.
 3. Use ONLY [__] for blank fields. NEVER use ___ or ... or __ or any other format.
 4. Each exercise MUST have MINIMUM 4 [__] fields. Count them before finishing.
@@ -1560,27 +1666,32 @@ o
   render();}
 
 async function genDict(){state.loadingDict=true;state.dictItems=[];state.dictAnswers={};state.dictFeedback='';render();
-const r=await ai([{role:'user',content:`5 oraciones en inglés (5-7 palabras) sobre "${state.topic.title}". Una por línea, sin numeración.`}],'English teacher 3rd grade Argentina. Simple sentences.',500);
+const ln=state.subj?.n||'Inglés';
+const r=await ai([{role:'user',content:`5 oraciones en ${ln} (5-7 palabras) sobre "${state.topic.title}". Una por línea, sin numeración.`}],`${ln} teacher 3rd grade Argentina. Simple sentences.`,500);
 state.dictItems=r.split('\n').map(l=>l.trim().replace(/^[-*\d.]\s*/,'')).filter(l=>l.length>3&&l.length<100).slice(0,5);state.loadingDict=false;render();}
 
 async function moreDict(){state.loadingDict=true;render();
-const r=await ai([{role:'user',content:`5 oraciones NUEVAS en inglés sobre "${state.topic.title}", distintas a: ${state.dictItems.join(' / ')}.`}],'English teacher. Simple sentences.',400);
+const ln=state.subj?.n||'Inglés';
+const r=await ai([{role:'user',content:`5 oraciones NUEVAS en ${ln} sobre "${state.topic.title}", distintas a: ${state.dictItems.join(' / ')}.`}],`${ln} teacher. Simple sentences.`,400);
 state.dictItems=[...state.dictItems,...r.split('\n').map(l=>l.trim().replace(/^[-*\d.]\s*/,'')).filter(l=>l.length>3&&l.length<100).slice(0,5)];state.loadingDict=false;render();}
 
 async function verifyDict(){state.loadingDict=true;
+const ln=state.subj?.n||'Inglés';
 const ps=state.dictItems.map((s,i)=>`Original: "${s}" | ${state.activeStudent?.name||'Alumno'}: "${state.dictAnswers[i]||'(vacío)'}"`).join('\n');
-const r=await ai([{role:'user',content:ps}],`Maestra inglés ${gradeStr()}. Corregí con emojis. Si mayoría correcta, EMPEZÁ con "EXCELENTE". En español.`,500);
+const r=await ai([{role:'user',content:ps}],`Maestra ${ln} ${gradeStr()}. Corregí con emojis. Si mayoría correcta, EMPEZÁ con "EXCELENTE". En español.`,500);
 state.dictFeedback=r;state.loadingDict=false;render();
 if(/excelente|muy bien/i.test(r)){state.stars+=2;await saveStudentData();showCat(state.activeStudent?.name,2);}}
 
 async function genFon(){state.loadingFon=true;state.fonItems=[];state.fonAnswers={};state.fonFeedback='';render();
-const r=await ai([{role:'user',content:`5 palabras inglesas de "${state.topic.title}". JSON SOLO:\n[{"word":"cat","hint":"animal","options":["ket","cat","kat"],"correct":1}]`}],'English teacher. ONLY JSON array.',500);
+const ln=state.subj?.n||'Inglés';
+const r=await ai([{role:'user',content:`5 palabras en ${ln} de "${state.topic.title}". JSON SOLO:\n[{"word":"cat","hint":"animal","options":["ket","cat","kat"],"correct":1}]`}],`${ln} teacher. ONLY JSON array.`,500);
 try{state.fonItems=JSON.parse(r.replace(/```json|```/g,'').trim()).slice(0,5);}catch{state.fonItems=[{word:'hello',hint:'saludo',options:['helo','hello','jello'],correct:1}];}
 state.loadingFon=false;render();}
 
 async function moreFon(){state.loadingFon=true;render();
+const ln=state.subj?.n||'Inglés';
 const ex=(state.fonItems||[]).map(it=>it.word).join(', ');
-const r=await ai([{role:'user',content:`5 palabras inglesas NUEVAS distintas a: ${ex}. JSON SOLO:\n[{"word":"dog","hint":"animal","options":["dag","dog","dug"],"correct":1}]`}],'English teacher. ONLY JSON array.',500);
+const r=await ai([{role:'user',content:`5 palabras NUEVAS en ${ln} distintas a: ${ex}. JSON SOLO:\n[{"word":"dog","hint":"animal","options":["dag","dog","dug"],"correct":1}]`}],`${ln} teacher. ONLY JSON array.`,500);
 try{state.fonItems=[...state.fonItems,...JSON.parse(r.replace(/```json|```/g,'').trim()).slice(0,5)];}catch{}state.loadingFon=false;render();}
 
 function verifyFon(){const ok=state.fonItems.filter((it,i)=>state.fonAnswers[i]===it.correct).length;const pc=Math.round(ok/state.fonItems.length*100);
@@ -1754,7 +1865,7 @@ async function genResumen(tipo){
   const pStu=state.pStudent||state.students[0]?.id;
   const stu=state.students.find(s=>s.id===pStu);
   const fil=its=>!rF&&!rT?its:its.filter(it=>{const d=it.isoDate||null;if(!d)return true;if(rF&&d<rF)return false;if(rT&&d>rT)return false;return true;});
-  const subs=sv==='all'?SUBJS:SUBJS.filter(s=>s.id===sv);
+  const subs=sv==='all'?getAllSubjs():getAllSubjs().filter(s=>s.id===sv);
   const tp=stu?subs.map(s=>`${s.n}: ${fil(stu.topics[s.id]||[]).map(t=>t.title).join(', ')||'Sin temas'}`).join('\n'):'Sin datos';
   const tk=stu?subs.map(s=>`${s.n}: ${fil(stu.tasks[s.id]||[]).map(t=>t.title).join(', ')||'Sin tareas'}`).join('\n'):'Sin datos';
   const rng=rF||rT?` (${rF?fmtD(rF):'inicio'} al ${rT?fmtD(rT):'hoy'})`:'';
@@ -1821,6 +1932,13 @@ async function init(){
   if(tp&&sn){const s={...newStudent(),name:sn||'Mi alumno',topics:{...ET(),...tp},tasks:{...ET(),...tk},stars:st||0};state.students=[s];await ss('edu_students',state.students);}
   else state.students=[];}
   else state.students=sts;
+  // Migrar alumnos: asegurar que tengan todas las materias custom
+  state.students.forEach(stu=>{
+    getAllSubjs().forEach(s=>{
+      if(!stu.topics[s.id])stu.topics[s.id]=[];
+      if(!stu.tasks[s.id])stu.tasks[s.id]=[];
+    });
+  });
   state.calendar=cl;state.parentPin=pp;
   render();}
 init();
