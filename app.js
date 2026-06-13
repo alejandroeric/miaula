@@ -898,19 +898,30 @@ function markTopicDone(subjId,idx){
 async function startQuickReview(){
   state.quickReview=true;state.quickItems=[];state.quickIdx=0;
   state.quickAnswers={};state.quickResults=null;state.loadingQuick=true;
-  // Juntar todos los temas practicados
-  const temas=[];
-  SUBJS.forEach(s=>{(state.topics[s.id]||[]).forEach((t,i)=>{if(state.topicProgress?.[`${s.id}_${i}`])temas.push({subj:s.n,title:t.title});});});
-  if(temas.length===0){
-    // Si no hay temas practicados, tomar los cargados
-    SUBJS.forEach(s=>{(state.topics[s.id]||[]).forEach(t=>temas.push({subj:s.n,title:t.title}));});
-  }
-  if(temas.length===0){state.loadingQuick=false;showToast('¡Primero practicá algunos temas!','#F59E0B');return;}
-  const sel=temas.sort(()=>Math.random()-.5).slice(0,Math.min(5,temas.length));
-  const r=await ai([{role:'user',content:`Temas: ${sel.map(t=>t.title+' ('+t.subj+')').join(', ')}\nCreá 1 pregunta de repaso por cada tema.`}],
-  `Maestra ${gradeStr()}. 5 preguntas de repaso rápido, 1 por tema. Cada pregunta en UNA línea con [__] para la respuesta. Formato:\nPregunta X [TEMA]: oración con [__]\n[Respuesta: respuesta]`,700);
-  const pts=r.split(/Pregunta\s+\d+/i).map(p=>p.trim()).filter(p=>p.length>5);
-  state.quickItems=pts.map(parseEx).filter((_,i)=>i<5);
+  // Juntar temas por materia, priorizando practicados
+  const temasxMateria={};
+  SUBJS.forEach(s=>{
+    const practicados=(state.topics[s.id]||[]).filter((t,i)=>state.topicProgress?.[`${s.id}_${i}`]);
+    const todos=state.topics[s.id]||[];
+    const lista=practicados.length?practicados:todos;
+    if(lista.length)temasxMateria[s.id]={subj:s.n,temas:lista};
+  });
+  const materiasConTemas=Object.values(temasxMateria);
+  if(!materiasConTemas.length){state.loadingQuick=false;showToast('¡Primero cargá algunos temas!','#F59E0B');return;}
+  // Tomar 1 tema al azar de cada materia disponible (máx 5)
+  const sel=materiasConTemas.slice(0,5).map(m=>({subj:m.subj,title:m.temas[Math.floor(Math.random()*m.temas.length)].title}));
+  const lista=sel.map(t=>`- Materia: ${t.subj} | Tema: ${t.title}`).join('\n');
+  const seed=Math.floor(Math.random()*9000)+1000;
+  const r=await ai([{role:'user',content:`Creá una pregunta de repaso DIFERENTE a las anteriores para cada uno de estos temas (semilla de variedad: ${seed}):\n${lista}\n\nUsá este formato para cada pregunta (sin texto extra):\nMATERIA: nombre\nTEMA: nombre\nLa ___ es ... [Respuesta: respuesta]`}],
+  `Sos la maestra de ${gradeStr()}. Una pregunta DISTINTA cada vez por tema con [__] o ___ para completar. Variá el tipo de pregunta: a veces completar, a veces "¿Qué es...?", a veces "¿Cuál es...?". Sin numeración, sin introducción.`,800);
+  const bloques=r.split(/MATERIA:/i).filter(b=>b.trim().length>5);
+  state.quickItems=bloques.map(b=>{
+    const mat=b.match(/^([^\n]+)/)?.[1]?.trim()||'';
+    const tem=b.match(/TEMA:\s*([^\n]+)/)?.[1]?.trim()||'';
+    const resto=b.replace(/^[^\n]+\n/,'').replace(/TEMA:[^\n]+\n/,'').trim();
+    const parsed=parseEx(resto);
+    return{...parsed,materia:mat,tema:tem};
+  }).filter(it=>it.q&&it.q.length>5).slice(0,5);
   state.loadingQuick=false;render();
 }
 function vQuickReview(){
@@ -935,6 +946,7 @@ ${items.map((it,i)=>`<div style="background:${state.quickResults[i]?'#ECFDF5':'#
   const cur=items[idx];
   const qNorm=cur.q.replace(/_{3,}/g,'[__]').replace(/\.{3,}/g,'[__]');
   const qHtml=qNorm.replace(/\[__\]/g,`<input id="qrInp" value="${(state.quickAnswers[idx]||'').replace(/"/g,'&quot;')}" oninput="state.quickAnswers[${idx}]=this.value" placeholder=" ? " class="inp-pill" style="width:130px;margin:0 5px;vertical-align:middle">`);
+  const subjData=SUBJS.find(s=>s.n===cur.materia);
   return`<div class="page"><div class="wrap">
 <button class="back-btn btn" onclick="go('student')">← Salir</button>
 <div class="hdr" style="background:linear-gradient(135deg,#F59E0B,#F97316);box-shadow:0 6px 20px rgba(245,158,11,.4)">
@@ -943,7 +955,10 @@ ${items.map((it,i)=>`<div style="background:${state.quickResults[i]?'#ECFDF5':'#
 <div style="background:rgba(255,255,255,.25);border-radius:50px;height:6px;margin-top:10px;overflow:hidden"><div style="background:rgba(45,27,105,.6);height:100%;width:${((idx+1)/items.length)*100}%;border-radius:50px;transition:width .4s ease"></div></div>
 </div>
 <div class="card" style="border-top:5px solid #F59E0B">
-<div style="font-size:11px;font-weight:700;color:#FCD34D;margin-bottom:10px;letter-spacing:.5px">PREGUNTA ${idx+1}</div>
+${cur.materia?`<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+  <span style="background:${subjData?subjData.bg:'rgba(109,40,217,.2)'};color:${subjData?subjData.cl:'#7C3AED'};border-radius:50px;padding:3px 10px;font-size:11px;font-weight:800">${subjData?subjData.ic:''} ${cur.materia}</span>
+  ${cur.tema?`<span style="color:#A78BFA;font-size:11px;font-weight:700">· ${cur.tema}</span>`:''}
+</div>`:''}
 <div style="font-size:16px;line-height:1.9;color:#E9D5FF;margin-bottom:14px">${qHtml}</div>
 ${!cur.q.includes('[__]')&&!qNorm.includes('[__]')?`<input class="inp" id="qrInp2" value="${state.quickAnswers[idx]||''}" placeholder="✍️ Tu respuesta..." oninput="state.quickAnswers[${idx}]=this.value" style="font-size:14px">`:'' }
 </div>
@@ -1731,19 +1746,46 @@ state.printContent=r;state.loadingPrint=false;render();}
 function printActivity(){const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial;max-width:700px;margin:30px auto;font-size:14px;line-height:1.8}.act{background:rgba(236,72,153,.1);border:2px solid #F9A8D4;border-radius:10px;padding:16px;white-space:pre-wrap}button{background:#EC4899;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;margin-top:14px}@media print{button{display:none}}</style></head><body><h1 style="color:#9D174D">🖨️ Mi actividad para imprimir</h1><div class="act">${state.printContent}</div><button onclick="window.print()">🖨️ Imprimir</button></body></html>`;try{const bl=new Blob([html],{type:'text/html;charset=utf-8'});if(!window.open(URL.createObjectURL(bl),'_blank'))alert('Permitir ventanas emergentes.');}catch{alert('Error.');}}
 
 async function genResumen(tipo){
-  state.loadingResume=true;state.resumeResult='';render();
-  const pStu=state.pStudent||state.students[0]?.id;
-  const stu=state.students.find(s=>s.id===pStu);
+  // Leer valores ANTES del render (que destruye el DOM)
   const sv=document.getElementById('resSubj')?.value||'all';
   const rF=document.getElementById('resFrom')?.value||'';
   const rT=document.getElementById('resTo')?.value||'';
+  state.loadingResume=true;state.resumeResult='';render();
+  const pStu=state.pStudent||state.students[0]?.id;
+  const stu=state.students.find(s=>s.id===pStu);
   const fil=its=>!rF&&!rT?its:its.filter(it=>{const d=it.isoDate||null;if(!d)return true;if(rF&&d<rF)return false;if(rT&&d>rT)return false;return true;});
   const subs=sv==='all'?SUBJS:SUBJS.filter(s=>s.id===sv);
   const tp=stu?subs.map(s=>`${s.n}: ${fil(stu.topics[s.id]||[]).map(t=>t.title).join(', ')||'Sin temas'}`).join('\n'):'Sin datos';
   const tk=stu?subs.map(s=>`${s.n}: ${fil(stu.tasks[s.id]||[]).map(t=>t.title).join(', ')||'Sin tareas'}`).join('\n'):'Sin datos';
   const rng=rF||rT?` (${rF?fmtD(rF):'inicio'} al ${rT?fmtD(rT):'hoy'})`:'';
-  const r=await ai([{role:'user',content:`${tipo==='examen'?'Examen':'Resumen'} trimestral${rng} para ${stu?.name||'alumno'}.\nTemas:\n${tp}\nTareas:\n${tk}`}],
-  `Maestra. ${tipo==='examen'?'Examen 6-8 preguntas variadas con respuestas al final.':'Resumen por materia: temas cubiertos, conceptos clave, áreas a repasar.'} Con emojis.`,1500);
+  const promptExamen=`Creá un examen trimestral${rng} para ${stu?.name||'el alumno'} (${gradeStr()}).
+Temas trabajados:\n${tp}\nTareas:\n${tk}
+
+El examen debe tener exactamente estas secciones con variedad y algo de dificultad progresiva:
+
+📝 PARTE 1 — Completar (3 oraciones con espacio en blanco)
+🔤 PARTE 2 — Verdadero o Falso (4 afirmaciones, algunas con trampa)
+❓ PARTE 3 — Preguntas abiertas (2 preguntas que requieren explicar con sus palabras)
+🧩 PARTE 4 — Desafío (1 pregunta más difícil que integre conceptos de los temas)
+
+Al final incluí:
+✅ RESPUESTAS CORRECTAS (todas las partes)
+
+Usá el nombre de ${stu?.name||'el alumno'} en alguna pregunta para personalizarlo. Con emojis.`;
+
+  const promptResumen=`Creá un resumen trimestral${rng} para ${stu?.name||'el alumno'} (${gradeStr()}).
+Temas trabajados:\n${tp}\nTareas:\n${tk}
+
+El resumen debe incluir por cada materia:
+📚 Temas cubiertos
+💡 Conceptos clave aprendidos
+⭐ Fortalezas observadas
+📌 Áreas a seguir practicando
+
+Al final agregá una sección "🎯 Recomendaciones para el próximo trimestre". Con emojis.`;
+
+  const r=await ai([{role:'user',content:tipo==='examen'?promptExamen:promptResumen}],
+  `Sos la maestra de ${gradeStr()}. Generá el documento solicitado de forma completa y profesional.`,1800);
   state.resumeResult=r;state.loadingResume=false;render();}
 
 // ── EXPORT / IMPORT ────────────────────────────────────
