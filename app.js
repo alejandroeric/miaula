@@ -809,13 +809,15 @@ state.students.map(s=>`<div style="display:flex;align-items:center;gap:12px;padd
 </div>`;}
   }
 
+  const sortByDate=(arr)=>[...arr].sort((a,b)=>(a.isoDate||a.date||'').localeCompare(b.isoDate||b.date||''));
+
   // ── TAB: TEMAS ──
   if(tab==='temas'){
     const pStu=state.pStudent||state.students[0]?.id;
     const stu=state.students.find(x=>x.id===pStu)||state.students[0];
     const aS=getAllSubjs().find(x=>x.id===(state.pSubj||'matematica'))||getAllSubjs()[0];
-    const sortByDate=(arr)=>[...arr].sort((a,b)=>(a.isoDate||a.date||'').localeCompare(b.isoDate||b.date||''));
-    const stuTopics=stu?sortByDate(stu.topics[aS.id]||[]):[];
+    const rawTopics=stu?stu.topics[aS.id]||[]:[];
+    const stuTopics=sortByDate(rawTopics);
     body=`<div class="card" style="border-left:5px solid ${aS.cl}">
 <div class="ftit" style="font-size:16px;margin-bottom:10px">📚 Cargar Temas</div>
 ${state.students.length>1?`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:5px">Alumno/a:</div><div style="display:flex;gap:6px;flex-wrap:wrap">${state.students.map(s=>`<button class="btn b-sm ${pStu===s.id?'':'inactive'}" style="${pStu===s.id?'background:#7C3AED;box-shadow:0 3px 0 #4C1D95;color:white':''}" onclick="setPStudent(${s.id})">${s.avatar||'🌟'} ${s.name}</button>`).join('')}</div></div>`:''}
@@ -829,9 +831,9 @@ ${state.students.length>1?`<div style="margin-bottom:10px"><div style="font-size
 <label style="display:inline-flex"><input type="file" accept=".pdf" style="display:none" onchange="pdfTopic(this)"><button type="button" class="btn" style="background:linear-gradient(135deg,#DC2626,#EF4444);box-shadow:0 5px 0 #7F1D1D;color:white;border-radius:10px;padding:9px 13px;font-size:12px" onclick="this.parentElement.querySelector('input').click()">📄 PDF</button></label>
 </div>
 <p style="font-weight:800;font-size:13px;color:${aS.cl};margin-bottom:7px">Temas en ${aS.n}${stu?` (${stu.name})`:''}: </p>
-${stuTopics.length?stuTopics.map((t,i)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:9px 12px;background:${aS.bg};border-radius:11px;margin-bottom:6px;border:1.5px solid ${aS.bd}">
+${stuTopics.length?stuTopics.map((t)=>{const realIdx=rawTopics.indexOf(t);return`<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:9px 12px;background:${aS.bg};border-radius:11px;margin-bottom:6px;border:1.5px solid ${aS.bd}">
 <div><div style="font-weight:800;font-size:13px;color:#E9D5FF">${t.title}</div><div style="font-size:11px;color:#A78BFA;margin-top:1px">📅 ${t.date}</div></div>
-<button onclick="delTopic('${pStu}','${aS.id}',${i})" style="background:none;border:none;cursor:pointer;font-size:15px;color:#E24B4A;padding:3px 5px">🗑️</button></div>`).join(''):'<p style="color:#A78BFA;font-size:12px">Sin temas...</p>'}
+<button onclick="delTopic('${pStu}','${aS.id}',${realIdx})" style="background:none;border:none;cursor:pointer;font-size:15px;color:#E24B4A;padding:3px 5px">🗑️</button></div>`;}).join(''):'<p style="color:#A78BFA;font-size:12px">Sin temas...</p>'}
 </div>`;}
 
   // ── TAB: TAREAS ──
@@ -839,7 +841,8 @@ ${stuTopics.length?stuTopics.map((t,i)=>`<div style="display:flex;justify-conten
     const pStu=state.pStudent||state.students[0]?.id;
     const stu=state.students.find(x=>x.id===pStu)||state.students[0];
     const aS=getAllSubjs().find(x=>x.id===(state.pSubj||'matematica'))||getAllSubjs()[0];
-    const stuTasks=stu?sortByDate(stu.tasks[aS.id]||[]):[]; 
+    const rawTasks=stu?stu.tasks[aS.id]||[]:[];
+    const stuTasks=sortByDate(rawTasks); 
     body=`<div class="card" style="border-left:5px solid #6366F1">
 <div class="ftit" style="font-size:16px;margin-bottom:10px">📝 Cargar Tareas</div>
 ${state.students.length>1?`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#7C3AED;margin-bottom:5px">Alumno/a:</div><div style="display:flex;gap:6px;flex-wrap:wrap">${state.students.map(s=>`<button class="btn b-sm ${pStu===s.id?'':'inactive'}" style="${pStu===s.id?'background:#7C3AED;box-shadow:0 3px 0 #4C1D95;color:white':''}" onclick="setPStudent(${s.id})">${s.avatar||'🌟'} ${s.name}</button>`).join('')}</div></div>`:''}
@@ -2119,7 +2122,7 @@ async function importData(inp){const f=inp.files[0];if(!f)return;inp.value='';
 // ── BUSCADOR ───────────────────────────────────────────
 function vBuscador(){
   const stu=state.activeStudent;
-  return`<div class="container">
+  return`<div class="page">
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
 <button class="btn b-sm inactive" onclick="go('student')">← Volver</button>
 <div class="ftit" style="font-size:18px">🔍 Buscador Escolar</div>
