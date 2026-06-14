@@ -480,7 +480,7 @@ ${exFmt==='completar'?`${state.exParsed.length===0&&!state.loadingEx?spin('Prepa
 ${exItems}
 ${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
   <button class="btn b-vio" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 5px 0 ${s.sh}" onclick="moreEx()">🔄 Más ejercicios</button>
-  ${!state.exResults&&state.exParsed.length>0?`<button class="btn b-grn" ${state.verifying?'disabled':''} onclick="verifyAnswers()">${state.verifying?'🔄 Corrigiendo...':'✅ Ver resultados'}</button>`:''}
+  ${!state.exResults&&state.exParsed.length>0?`<button id="verifyBtn" class="btn b-grn" ${state.verifying?'disabled':''} onclick="verifyAnswers()">${state.verifying?'🔄 Corrigiendo...':'✅ Ver resultados'}</button>`:''}
   ${state.exResults?`<button class="btn b-grn" onclick="moreEx()">➕ Nuevos ejercicios</button>`:''}
 </div>`}
 ${state.feedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:10px;font-size:14px;font-weight:700;text-align:center">${state.feedback}</div>`:''}`:`${fmtBody}`}
@@ -604,7 +604,7 @@ ${state.exParsed.length===0&&!state.loadingEx?spin('Preparando ejercicios...'):'
 ${exItems}
 ${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
   <button class="btn b-vio" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 5px 0 ${s.sh}" onclick="moreEx()">🔄 Más ejercicios</button>
-  ${!state.exResults&&state.exParsed.length>0?`<button class="btn b-grn" ${state.verifying?'disabled':''} onclick="verifyAnswers()">${state.verifying?'🔄 Corrigiendo...':'✅ Ver resultados'}</button>`:''}
+  ${!state.exResults&&state.exParsed.length>0?`<button id="verifyBtn" class="btn b-grn" ${state.verifying?'disabled':''} onclick="verifyAnswers()">${state.verifying?'🔄 Corrigiendo...':'✅ Ver resultados'}</button>`:''}
   ${state.exResults?`<button class="btn b-grn" onclick="moreEx()">➕ Nuevos ejercicios</button>`:''}
 </div>`}
 ${state.feedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:10px;font-size:14px;font-weight:700;text-align:center">${state.feedback}</div>`:''}
@@ -1940,8 +1940,7 @@ function sopaClick(r,c){
     if(len>0&&(dr===0||dc===0||Math.abs(dr)===Math.abs(dc))){
       const sr=dr===0?0:(dr>0?1:-1),sc=dc===0?0:(dc>0?1:-1);
       let word='';for(let i=0;i<=len;i++)word+=state.sopaGrid[r1+sr*i][c1+sc*i];
-      const rev=word.split('').reverse().join('');
-      const match=state.sopaWordList.find(w=>!state.sopaFound.includes(w.word)&&(w.word===word||w.word===rev));
+      const match=state.sopaWordList.find(w=>!state.sopaFound.includes(w.word)&&w.word===word);
       if(match){state.sopaFound=[...state.sopaFound,match.word];if(state.sopaFound.length===state.sopaWordList.length){state.stars+=5;saveStudentData();showCat(state.activeStudent?.name,5);}}
     }
     state.sopaStart=null;
