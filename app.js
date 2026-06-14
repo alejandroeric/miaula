@@ -2117,7 +2117,7 @@ async function importData(inp){const f=inp.files[0];if(!f)return;inp.value='';
 // ── BUSCADOR ───────────────────────────────────────────
 function vBuscador(){
   const stu=state.activeStudent;
-  return`<div class="page">
+  return`<div class="page"><div class="wrap">
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
 <button class="btn b-sm inactive" onclick="go('student')">← Volver</button>
 <div class="ftit" style="font-size:18px">🔍 Buscador Escolar</div>
@@ -2141,7 +2141,7 @@ ${state.busqResult&&!state.busqLoading?`<div class="card" style="border-left:5px
 <div id="busqResultBox" style="font-size:14px;line-height:1.85;color:#E9D5FF;white-space:pre-wrap">${safeMd(state.busqResult)}</div>
 ${state.busqFuente?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(139,92,246,.3);font-size:11px;color:#7C3AED;font-weight:700">🌐 Fuente: <span style="font-weight:400;color:#A78BFA">${sanitize(state.busqFuente)}</span></div>`:''}
 </div>`:''}
-</div>`;
+</div></div>`;
 }
 
 async function buscar(){
