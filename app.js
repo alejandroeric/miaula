@@ -34,13 +34,13 @@ let state={
   triviaItems:[],triviaAnswers:{},triviaChecked:false,loadingTrivia:false,
   memCards:[],memFlipped:[],memMatched:[],memMoves:0,memWon:false,
   hangWord:'',hangHint:'',hangGuessed:[],hangLoading:false,hangWon:false,hangLost:false,
-  printContent:'',loadingPrint:false,
   editingStudent:null,pEditTab:'list',
   sopaGrid:[],sopaWordList:[],sopaFound:[],sopaStart:null,sopaLoading:false,
   cruciGrid:[],cruciClues:{across:[],down:[]},cruciNums:{},cruciAnswers:{},cruciChecked:false,cruciLoading:false,
   dicResult:null,dicHistory:[],loadingDic:false,
   bibTab:'todos',bibSelected:null,bibAiResult:'',bibLoading:false,
-  busqQuery:'',busqResult:'',busqLoading:false,busqFuente:''
+  busqQuery:'',busqResult:'',busqLoading:false,busqFuente:'',
+  chatLoading:false,pStudent:null
 };
 
 // ── STORAGE ────────────────────────────────────────────
@@ -313,17 +313,19 @@ El campo "type" DEBE contener la clasificación gramatical real de la palabra (e
 function vSubject(){
   const s=state.subj;
   const sortByDate=(arr)=>[...arr].sort((a,b)=>(a.isoDate||a.date||'').localeCompare(b.isoDate||b.date||''));
-  const tl=sortByDate(state.topics[s.id]||[]),kl=sortByDate(state.tasks[s.id]||[]);
+  const rawTopics=state.topics[s.id]||[],rawTasks=state.tasks[s.id]||[];
+  const tl=sortByDate(rawTopics),kl=sortByDate(rawTasks);
   const showT=state.subjTab!=='tasks';
-  const tItems=showT?(tl.length?tl.map((t,i)=>{
-    const done=state.topicProgress?.[`${s.id}_${i}`]||0;
-    return`<div class="card" style="border-left:5px solid ${s.cl};cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="goTopic(${i})">
+  const tItems=showT?(tl.length?tl.map((t)=>{
+    const realIdx=rawTopics.indexOf(t);
+    const done=state.topicProgress?.[`${s.id}_${realIdx}`]||0;
+    return`<div class="card" style="border-left:5px solid ${s.cl};cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="goTopic(${realIdx})">
 <div><div style="display:flex;align-items:center;gap:6px">
 <div style="font-weight:800;font-size:15px;color:#E9D5FF">${t.title}</div>
 ${done>0?`<span style="background:rgba(16,185,129,.15);color:#059669;font-size:10px;font-weight:800;padding:2px 7px;border-radius:50px">✅ ${done>1?done+'x practicado':'Practicado'}</span>`:''}
 </div><div style="font-size:11px;color:#A78BFA;margin-top:2px">📅 ${t.date}</div></div>
 <div style="font-size:18px;color:${s.cl}">→</div></div>`;}).join(''):`<div class="card" style="text-align:center;padding:36px"><div style="font-size:44px">📭</div><p style="color:#7C3AED;font-size:15px;margin-top:10px;font-weight:700">Todavía no hay temas cargados</p></div>`):
-  (kl.length?kl.map((t,i)=>`<div class="card" style="border-left:5px solid ${t.isExam?'#EF4444':s.cl};cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="goTask(${i})">
+  (kl.length?kl.map((t)=>{const realIdx=rawTasks.indexOf(t);return`<div class="card" style="border-left:5px solid ${t.isExam?'#EF4444':s.cl};cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="goTask(${realIdx})">
 <div style="flex:1">
   <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
     <div style="font-weight:800;font-size:15px;color:#E9D5FF">${t.title}</div>
@@ -332,7 +334,7 @@ ${done>0?`<span style="background:rgba(16,185,129,.15);color:#059669;font-size:1
   <div style="font-size:11px;color:#A78BFA;margin-top:2px">📅 ${t.date}</div>
   ${t.content?`<div style="font-size:12px;color:#C4B5FD;margin-top:3px;line-height:1.5">${t.content.substring(0,100)}${t.content.length>100?'...':''}</div>`:''}
 </div>
-<div style="font-size:18px;color:${t.isExam?'#EF4444':s.cl};margin-left:10px">→</div></div>`).join(''):`<div class="card" style="text-align:center;padding:36px"><div style="font-size:44px">📋</div><p style="color:#7C3AED;font-size:15px;margin-top:10px;font-weight:700">No hay tareas cargadas</p></div>`);
+<div style="font-size:18px;color:${t.isExam?'#EF4444':s.cl};margin-left:10px">→</div></div>`;}).join(''):`<div class="card" style="text-align:center;padding:36px"><div style="font-size:44px">📋</div><p style="color:#7C3AED;font-size:15px;margin-top:10px;font-weight:700">No hay tareas cargadas</p></div>`);
   const isLen=s.id==='lengua';
   const showDic=state.subjTab==='diccionario';
   let dicBody='';
@@ -1445,7 +1447,7 @@ async function photoTopic(inp){
   const files=Array.from(inp.files);if(!files.length)return;inp.value='';
   const msg=files.length>1?`🔄 Analizando ${files.length} fotos...`:'🔄 Analizando la foto...';
   showToast(msg,'#7C3AED');
-  const r=await analyzePhotos(files,'Analizá este material escolar de 3er grado Argentina. Extraé tema, conceptos, ejemplos. En español organizado.');
+  const r=await analyzePhotos(files,`Analizá este material escolar de ${gradeStr()} Argentina. Extraé tema, conceptos, ejemplos. En español organizado.`);
   const fl=r.split('\n').find(l=>l.trim().length>3&&!l.startsWith('---'))||'';
   const tt=document.getElementById('topicTitle');const td2=document.getElementById('topicDesc');
   if(tt&&!tt.value)tt.value=fl.replace(/^[*#\-\s]+/,'').substring(0,60);
@@ -1456,7 +1458,7 @@ async function photoTask(inp){
   const files=Array.from(inp.files);if(!files.length)return;inp.value='';
   const msg=files.length>1?`🔄 Analizando ${files.length} fotos...`:'🔄 Analizando la foto...';
   showToast(msg,'#7C3AED');
-  const r=await analyzePhotos(files,'Analizá este cuaderno de 3er grado Argentina. Describí la tarea, consignas y preguntas. En español organizado.');
+  const r=await analyzePhotos(files,`Analizá este cuaderno de ${gradeStr()} Argentina. Describí la tarea, consignas y preguntas. En español organizado.`);
   const fl=r.split('\n').find(l=>l.trim().length>3&&!l.startsWith('---'))||'';
   const kt=document.getElementById('taskTitle');const kd=document.getElementById('taskDesc');
   if(kt&&!kt.value)kt.value=fl.replace(/^[*#\-\s]+/,'').substring(0,60);
@@ -1471,7 +1473,6 @@ function showToast(msg,color='#7C3AED'){
   if(!msg.startsWith('🔄'))setTimeout(()=>t.remove(),3000);}
 
 async function saveConfig(){const p=document.getElementById('cfgPin')?.value;if(p?.length>=4)state.parentPin=storePin(p);await ss('edu_pin',state.parentPin);alert('✅ ¡Guardado!');render();}
-async function resetStars(){state.stars=0;await saveStudentData();render();}
 
 // ── EXPLANATION ────────────────────────────────────────
 async function loadExpl(){
@@ -2044,12 +2045,6 @@ state.hangLoading=false;render();}
 
 function guessLetter(l){if(state.hangWon||state.hangLost||state.hangGuessed.includes(l))return;state.hangGuessed=[...state.hangGuessed,l];const errors=state.hangGuessed.filter(x=>!state.hangWord.includes(x)).length;const won=state.hangWord.split('').every(c=>c===' '||state.hangGuessed.includes(c));if(won){state.hangWon=true;state.stars+=3;saveStudentData();setTimeout(()=>showCat(state.activeStudent?.name,3),300);}if(errors>=6)state.hangLost=true;render();}
 
-async function genPrint(tipo){state.loadingPrint=true;state.printContent='';render();
-const prompts={sopalet:'Creá una sopa de letras 8x8 para niños de 8 años. 6 palabras de animales. Mostrá la grilla y la lista de palabras a buscar.',crucigrama:'Mini crucigrama 4 palabras para niños de 8 años. Pistas numeradas y esquema vacío.',colorear:'Escena para colorear para niño de 8 años: jardín mágico con hadas y animales. Colores sugeridos para cada elemento.',laberinto:'Laberinto ASCII 12x12 para niños. # = pared, E = entrada, S = salida. Con solución posible.',unirpuntos:'Unir puntos 1 al 15 para dibujar un animal. Describí el animal y coordenadas en grilla imaginaria.',completar:'8 frases para completar sobre naturaleza para niños de 8 años. Espacio _____ en cada una. Banco de palabras al final.'};
-const r=await ai([{role:'user',content:prompts[tipo]}],`Maestra creativa para ${gradeStr()}. Actividad imprimible. Español con emojis.`,900);
-state.printContent=r;state.loadingPrint=false;render();}
-
-function printActivity(){const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial;max-width:700px;margin:30px auto;font-size:14px;line-height:1.8}.act{background:rgba(236,72,153,.1);border:2px solid #F9A8D4;border-radius:10px;padding:16px;white-space:pre-wrap}button{background:#EC4899;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;margin-top:14px}@media print{button{display:none}}</style></head><body><h1 style="color:#9D174D">🖨️ Mi actividad para imprimir</h1><div class="act">${state.printContent}</div><button onclick="window.print()">🖨️ Imprimir</button></body></html>`;try{const bl=new Blob([html],{type:'text/html;charset=utf-8'});if(!window.open(URL.createObjectURL(bl),'_blank'))alert('Permitir ventanas emergentes.');}catch{alert('Error.');}}
 
 async function genResumen(tipo){
   // Leer valores ANTES del render (que destruye el DOM)
