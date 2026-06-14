@@ -39,7 +39,8 @@ let state={
   sopaGrid:[],sopaWordList:[],sopaFound:[],sopaStart:null,sopaLoading:false,
   cruciGrid:[],cruciClues:{across:[],down:[]},cruciNums:{},cruciAnswers:{},cruciChecked:false,cruciLoading:false,
   dicResult:null,dicHistory:[],loadingDic:false,
-  bibTab:'todos',bibSelected:null,bibAiResult:'',bibLoading:false
+  bibTab:'todos',bibSelected:null,bibAiResult:'',bibLoading:false,
+  busqQuery:'',busqResult:'',busqLoading:false,busqFuente:''
 };
 
 // ── STORAGE ────────────────────────────────────────────
@@ -48,6 +49,8 @@ async function sg(k,d){try{if(isCA()){const r=await window.storage.get(k);return
 async function ss(k,v){try{if(isCA()){await window.storage.set(k,JSON.stringify(v));return;}localStorage.setItem('miAula_'+k,JSON.stringify(v));}catch{}}
 function getApiKey(){return localStorage.getItem('miAula_apikey')||'';}
 function saveApiKey(k){if(k)localStorage.setItem('miAula_apikey',k.trim());}
+function getSerpKey(){return localStorage.getItem('miAula_serpkey')||'';}
+function saveSerpKey(k){if(k)localStorage.setItem('miAula_serpkey',k.trim());}
 
 // Hash simple del PIN (no criptográfico, solo evita texto plano visible)
 function hashPin(pin){let h=0;for(let i=0;i<pin.length;i++){h=(Math.imul(31,h)+pin.charCodeAt(i))|0;}return'p'+Math.abs(h).toString(36);}
@@ -178,6 +181,7 @@ function getView(){
     case'quickReview':return vQuickReview();case'recreo':return vRecreo();
     case'cal':return vCal();case'parent':return vParent();
     case'biblioteca':return vBiblioteca();
+    case'buscador':return vBuscador();
     default:return vWelcome();
   }
 }
@@ -261,12 +265,13 @@ ${state.streak>0?`<div style="background:rgba(255,255,255,.2);border-radius:50px
 </div></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px" class="subj-grid">${rows}</div>
 ${idiomaRows}
-<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-bottom:14px;overflow:hidden">
+<div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-bottom:14px;overflow:hidden">
 <button class="btn b-ind" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('cal')"><span>📅</span><span>Calendario</span></button>
 <button class="btn" style="background:linear-gradient(135deg,#8B5CF6,#A855F7);box-shadow:0 5px 0 #4C1D95;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="showProg()"><span>📊</span><span>Progreso</span></button>
 <button class="btn" style="background:linear-gradient(135deg,#F59E0B,#F97316);box-shadow:0 5px 0 #78350F;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="launchQuick()"><span>⚡</span><span>Repaso</span></button>
 <button class="btn b-org" style="border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('recreo')"><span>🎉</span><span>Recreo</span></button>
 <button class="btn" style="background:linear-gradient(135deg,#0E7490,#0891B2);box-shadow:0 5px 0 #164E63;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('biblioteca')"><span>📖</span><span>Biblio</span></button>
+<button class="btn" style="background:linear-gradient(135deg,#7C3AED,#6D28D9);box-shadow:0 5px 0 #3B0764;color:white;border-radius:12px;padding:11px 4px;font-size:11px;flex-direction:column;gap:3px;min-width:0" onclick="go('buscador')"><span>🔍</span><span>Buscar</span></button>
 </div>
 ${getNivelHtml()}
 <div class="card" style="padding:12px 14px;margin-bottom:10px">
@@ -972,6 +977,15 @@ ${!inClaude?`<div style="padding-top:14px;border-top:1.5px solid rgba(139,92,246
 </div>
 <p style="font-size:11px;font-weight:700;color:${hasKey?'#059669':'#EF4444'}">${hasKey?'✅ API Key configurada':'❌ Sin API Key'}</p>
 <p style="font-size:11px;color:#FCD34D;margin-top:5px;background:rgba(245,158,11,.12);border-radius:7px;padding:6px 9px">⚠️ La API Key es visible en las DevTools del navegador (pestaña Red). No uses esta app en computadoras públicas.</p>
+<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(139,92,246,.15)">
+<div style="font-weight:800;font-size:14px;color:#7C3AED;margin-bottom:5px">🔍 API Key de SerpApi</div>
+<p style="font-size:12px;color:#A78BFA;margin-bottom:8px;line-height:1.6">Necesaria para el Buscador Escolar. Gratis en <a href="https://serpapi.com" target="_blank" style="color:#7C3AED;font-weight:700">serpapi.com →</a> (100 búsquedas/mes, sin tarjeta)</p>
+<div style="display:flex;gap:7px;margin-bottom:6px">
+<input class="inp" id="cfgSerpKey" type="password" placeholder="Pegá tu SerpApi Key..." style="margin:0;flex:1;font-size:12px">
+<button class="btn b-vio" style="padding:10px 14px;font-size:12px;white-space:nowrap;border-radius:11px" onclick="saveSerpKey(document.getElementById('cfgSerpKey').value);render()">💾</button>
+</div>
+<p style="font-size:11px;font-weight:700;color:${getSerpKey()?'#059669':'#EF4444'}">${getSerpKey()?'✅ SerpApi Key configurada':'❌ Sin SerpApi Key'}</p>
+</div>
 </div>`:''}
 
 <div style="margin-top:16px;padding-top:14px;border-top:1.5px solid rgba(139,92,246,.2)">
@@ -2112,6 +2126,97 @@ async function importData(inp){const f=inp.files[0];if(!f)return;inp.value='';
   render();const t=document.createElement('div');t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#7C3AED,#A855F7);color:white;padding:12px 24px;border-radius:50px;font-family:Nunito,sans-serif;font-weight:800;font-size:14px;z-index:99999';
   t.textContent='✅ ¡Datos importados!';document.body.appendChild(t);setTimeout(()=>t.remove(),3500);
   }catch{alert('❌ Error al leer el archivo.');}}
+
+// ── BUSCADOR ───────────────────────────────────────────
+function vBuscador(){
+  const stu=state.activeStudent;
+  const noKey=!getSerpKey();
+  return`<div class="container">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+<button class="btn b-sm inactive" onclick="go('student')">← Volver</button>
+<div class="ftit" style="font-size:18px">🔍 Buscador Escolar</div>
+</div>
+${noKey?`<div class="card" style="border-left:5px solid #F59E0B;margin-bottom:14px">
+<div style="font-weight:800;color:#FCD34D;margin-bottom:6px">⚙️ Configurá tu clave de SerpApi</div>
+<div style="font-size:13px;color:#C4B5FD;margin-bottom:10px">Para buscar en internet necesitás una API key gratuita de SerpApi.<br>Obtené la tuya en <b>serpapi.com</b> → Free (100 búsquedas/mes, sin tarjeta).</div>
+<div style="display:flex;gap:8px">
+<input class="inp" id="serpKeyInp" placeholder="Pegá tu SerpApi Key aquí" style="flex:1">
+<button class="btn b-vio" onclick="(()=>{const v=document.getElementById('serpKeyInp')?.value?.trim();if(v){saveSerpKey(v);render();}else showToast('Pegá la key primero','#EF4444');})()">Guardar</button>
+</div>
+</div>`:''}
+<div class="card" style="margin-bottom:14px">
+<div style="font-size:13px;font-weight:700;color:#A78BFA;margin-bottom:8px">¿Qué necesitás para el cole?</div>
+<div style="font-size:12px;color:#7C3AED;margin-bottom:10px;background:rgba(109,40,217,.15);border-radius:8px;padding:8px 10px">
+Ejemplos: <em>"leyenda argentina del Pombero"</em> · <em>"biografía de Manuel Belgrano"</em> · <em>"poema de Alfonsina Storni"</em> · <em>"¿qué fue la Revolución de Mayo?"</em>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<input class="inp" id="busqInput" placeholder="Escribí lo que necesitás..." style="flex:1" value="${sanitize(state.busqQuery||'')}" onkeydown="if(event.key==='Enter')buscar()">
+<button class="btn b-vio" onclick="buscar()" ${state.busqLoading||noKey?'disabled':''}>🔍 Buscar</button>
+</div>
+${state.busqLoading?`<div>${spin('Buscando en internet...')}</div>`:''}
+</div>
+${state.busqResult&&!state.busqLoading?`<div class="card" style="border-left:5px solid #7C3AED">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+<div class="ftit" style="font-size:15px">📄 Resultado</div>
+<button class="btn b-sm" onclick="copyBusq()" style="font-size:11px">📋 Copiar todo</button>
+</div>
+<div id="busqResultBox" style="font-size:14px;line-height:1.85;color:#E9D5FF;white-space:pre-wrap">${safeMd(state.busqResult)}</div>
+${state.busqFuente?`<div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(139,92,246,.3);font-size:11px;color:#7C3AED;font-weight:700">🌐 Fuente: <span style="font-weight:400;color:#A78BFA">${sanitize(state.busqFuente)}</span></div>`:''}
+</div>`:''}
+</div>`;
+}
+
+async function buscar(){
+  const q=document.getElementById('busqInput')?.value?.trim();
+  if(!q)return showToast('Escribí qué querés buscar','#EF4444');
+  const sKey=getSerpKey();
+  if(!sKey)return showToast('Primero configurá tu SerpApi Key','#EF4444');
+  state.busqQuery=q;
+  state.busqResult='';
+  state.busqFuente='';
+  state.busqLoading=true;
+  render();
+  try{
+    // 1) Buscar en SerpApi
+    const bRes=await fetch(`https://serpapi.com/search.json?q=${encodeURIComponent(q+' argentina escuela primaria')}&hl=es&gl=ar&num=5&api_key=${sKey}`);
+    if(!bRes.ok)throw new Error('Error SerpApi: '+bRes.status);
+    const bData=await bRes.json();
+    const results=(bData.organic_results||[]).slice(0,5);
+    if(!results.length)throw new Error('Sin resultados');
+    const snippets=results.map((r,i)=>`[${i+1}] ${r.title}\n${r.snippet||''}\nURL: ${r.link}`).join('\n\n');
+    const fuentes=results.map(r=>r.link).join(', ');
+
+    // 2) Claude clasifica y responde
+    const stu=state.activeStudent;
+    const sysPrompt=`Sos un asistente educativo para alumnos de primaria argentinos. Recibís resultados de búsqueda web y debés presentar la información de forma clara y apropiada para la edad.
+
+REGLAS SEGÚN EL TIPO DE PEDIDO:
+- Si es una LEYENDA, CUENTO o POEMA: transcribilo completo tal como aparece en los resultados. No resumás.
+- Si es una BIOGRAFÍA: presentala completa pero bien organizada con datos clave (nacimiento, vida, obra, muerte).
+- Si es una PREGUNTA PUNTUAL: respondé en 2-4 oraciones claras y directas.
+- Si es una GUÍA con varias preguntas: respondé cada pregunta por separado con su número.
+- Siempre en español, lenguaje accesible para primaria.
+- NO agregues introducción ni despedida. Empezá directamente con el contenido.`;
+
+    const userMsg=`El alumno busca: "${q}"\n\nResultados de búsqueda:\n${snippets}\n\nPresentá la información siguiendo las reglas según el tipo de contenido.`;
+    const result=await ai([{role:'user',content:userMsg}],sysPrompt,2400);
+    state.busqResult=result;
+    state.busqFuente=results[0]?.link||fuentes;
+  }catch(e){
+    state.busqResult='❌ '+(e.message||'No se pudo buscar. Verificá tu Brave API Key y la conexión a internet.');
+    state.busqFuente='';
+  }
+  state.busqLoading=false;
+  render();
+}
+
+function copyBusq(){
+  const txt=state.busqResult||'';
+  navigator.clipboard.writeText(txt).then(()=>showToast('¡Copiado!','#10B981')).catch(()=>{
+    const el=document.getElementById('busqResultBox');
+    if(el){const r=document.createRange();r.selectNode(el);window.getSelection().removeAllRanges();window.getSelection().addRange(r);document.execCommand('copy');showToast('¡Copiado!','#10B981');}
+  });
+}
 
 // ── INIT ───────────────────────────────────────────────
 async function init(){
