@@ -1138,7 +1138,7 @@ ${cur.materia?`<div style="display:flex;align-items:center;gap:6px;margin-bottom
   ${cur.tema?`<span style="color:#A78BFA;font-size:11px;font-weight:700">· ${cur.tema}</span>`:''}
 </div>`:''}
 <div style="font-size:16px;line-height:1.9;color:#E9D5FF;margin-bottom:14px">${qHtml}</div>
-${!cur.q.includes('[__]')&&!qNorm.includes('[__]')?`<input class="inp" id="qrInp2" value="${state.quickAnswers[idx]||''}" placeholder="✍️ Tu respuesta..." oninput="state.quickAnswers[${idx}]=this.value" style="font-size:14px">`:'' }
+${!qNorm.includes('[__]')?`<input class="inp" id="qrInp2" value="${state.quickAnswers[idx]||''}" placeholder="✍️ Tu respuesta..." oninput="state.quickAnswers[${idx}]=this.value" style="font-size:14px">`:''}
 </div>
 <div style="display:flex;gap:8px">
 ${idx>0?`<button class="btn b-ind" style="flex:1;border-radius:12px;padding:13px" onclick="state.quickIdx--;render()">← Anterior</button>`:''}
@@ -1344,7 +1344,7 @@ async function addTask(){
 
 async function delTask(stuId,subjId,id){
   const idx=state.students.findIndex(s=>s.id===parseInt(stuId));if(idx<0)return;
-  state.students[idx].tasks[subjId]=state.students[idx].tasks[subjId].filter(t=>t.id!==id);
+  state.students[idx].tasks[subjId]=state.students[idx].tasks[subjId].filter(t=>t.id!==id&&t.id!==Number(id));
   if(state.activeStudent?.id===parseInt(stuId)){state.activeStudent=state.students[idx];state.tasks={...state.tasks,...state.students[idx].tasks};}
   await ss('edu_students',state.students);render();}
 
@@ -1472,7 +1472,7 @@ function showToast(msg,color='#7C3AED'){
   t.textContent=msg;document.body.appendChild(t);
   if(!msg.startsWith('🔄'))setTimeout(()=>t.remove(),3000);}
 
-async function saveConfig(){const p=document.getElementById('cfgPin')?.value;if(p?.length>=4)state.parentPin=storePin(p);await ss('edu_pin',state.parentPin);alert('✅ ¡Guardado!');render();}
+async function saveConfig(){const p=document.getElementById('cfgPin')?.value?.trim();if(p){if(p.length<4||!/^\d+$/.test(p)){alert('❌ El PIN debe tener al menos 4 dígitos numéricos.');return;}state.parentPin=storePin(p);}await ss('edu_pin',state.parentPin);alert('✅ ¡Guardado!');render();}
 
 // ── EXPLANATION ────────────────────────────────────────
 async function loadExpl(){
@@ -1890,7 +1890,7 @@ const ex=(state.fonItems||[]).map(it=>it.word).join(', ');
 const r=await ai([{role:'user',content:`5 palabras NUEVAS en ${ln} distintas a: ${ex}. JSON SOLO:\n[{"word":"dog","hint":"animal","options":["dag","dog","dug"],"correct":1}]`}],`${ln} teacher. ONLY JSON array.`,500);
 try{state.fonItems=[...state.fonItems,...JSON.parse(r.replace(/```json|```/g,'').trim()).slice(0,5)];}catch{}state.loadingFon=false;render();}
 
-function verifyFon(){const ok=state.fonItems.filter((it,i)=>state.fonAnswers[i]===it.correct).length;const pc=Math.round(ok/state.fonItems.length*100);
+function verifyFon(){if(!state.fonItems?.length)return;const ok=state.fonItems.filter((it,i)=>state.fonAnswers[i]===it.correct).length;const pc=Math.round(ok/state.fonItems.length*100);
 state.fonFeedback=`✅ ${ok} de ${state.fonItems.length} correctas (${pc}%)\n\n${state.fonItems.map((it,i)=>`• "${it.word}" → correcta: "${it.options[it.correct]}" ${state.fonAnswers[i]===it.correct?'✅':'❌'}`).join('\n')}`;
 render();if(pc>=60){state.stars+=2;saveStudentData();showCat(state.activeStudent?.name,2);}}
 
@@ -2101,7 +2101,8 @@ function exportData(){
 async function importData(inp){const f=inp.files[0];if(!f)return;inp.value='';
   try{const data=JSON.parse(await f.text());
   if(!data.students&&!data.topics){alert('❌ Archivo no válido.');return;}
-  const ok=confirm(`¿Importar datos exportados el ${new Date(data.exportDate).toLocaleDateString('es-AR')}?\nEsto reemplazará todos los datos actuales.`);
+  const fechaExport=data.exportDate?new Date(data.exportDate).toLocaleDateString('es-AR'):'fecha desconocida';
+  const ok=confirm(`¿Importar datos exportados el ${fechaExport}?\nEsto reemplazará todos los datos actuales.`);
   if(!ok)return;
   if(data.version===2){state.students=data.students||[];state.calendar=data.calendar||[];state.parentPin=data.parentPin||state.parentPin;}
   else{// compatibilidad v1
@@ -2208,11 +2209,12 @@ async function init(){
   if(tp&&sn){const s={...newStudent(),name:sn||'Mi alumno',topics:{...ET(),...tp},tasks:{...ET(),...tk},stars:st||0};state.students=[s];await ss('edu_students',state.students);}
   else state.students=[];}
   else state.students=sts;
-  // Migrar alumnos: asegurar que tengan todas las materias custom
+  // Migrar alumnos: asegurar que tengan todas las materias custom y que todas las tareas tengan id
   state.students.forEach(stu=>{
     getAllSubjs().forEach(s=>{
       if(!stu.topics[s.id])stu.topics[s.id]=[];
       if(!stu.tasks[s.id])stu.tasks[s.id]=[];
+      stu.tasks[s.id].forEach(t=>{if(!t.id)t.id=Date.now()+Math.random();});
     });
   });
   state.calendar=cl;state.parentPin=pp;
