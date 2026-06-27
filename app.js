@@ -82,7 +82,7 @@ async function aiImg(b64,mt,p){
 }
 const f2b=f=>new Promise((o,e)=>{const r=new FileReader();r.onload=()=>o(r.result.split(',')[1]);r.onerror=e;r.readAsDataURL(f);});
 const spk=(t,l='en-US',rt=0.58)=>{try{window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=l;u.rate=rt;window.speechSynthesis.speak(u);}catch{}};
-function spkDict(sentence){try{window.speechSynthesis.cancel();const all=[sentence,...sentence.trim().split(/\s+/).filter(w=>w.length>0)];let idx=0;function next(){if(idx>=all.length)return;const u=new SpeechSynthesisUtterance(all[idx]);u.lang='en-US';u.rate=idx===0?0.58:0.45;const isFirst=idx===0;idx++;u.onend=()=>setTimeout(next,isFirst?700:280);window.speechSynthesis.speak(u);}next();}catch{}}
+function spkDict(sentence,lang='en-US'){try{window.speechSynthesis.cancel();const all=[sentence,...sentence.trim().split(/\s+/).filter(w=>w.length>0)];let idx=0;function next(){if(idx>=all.length)return;const u=new SpeechSynthesisUtterance(all[idx]);u.lang=lang;u.rate=idx===0?0.58:0.45;const isFirst=idx===0;idx++;u.onend=()=>setTimeout(next,isFirst?700:280);window.speechSynthesis.speak(u);}next();}catch{}}
 function toggleReveal(i){const el=document.getElementById('rev_'+i);const btn=document.getElementById('revBtn_'+i);if(!el)return;const show=el.style.display!=='block';el.style.display=show?'block':'none';if(btn)btn.textContent=show?'🙈 Ocultar':'👁 Ver posible respuesta';}
 function setExFormat(f){state.exFormat=f;state.mcAnswers={};state.vofAnswers={};state.exFormatData=[];state.mcChecked=false;state.vofChecked=false;state.exParsed=[];state.answers={};state.exResults=null;state.revealedAnswers={};state.feedback='';state.exBatch=0;genEx();}
 function setMC(i,j){if(!state.mcAnswers)state.mcAnswers={};state.mcAnswers[i]=j;render();}
@@ -380,7 +380,8 @@ ${isLen?`<button class="tab btn ${showDic?'active':'inactive'}" style="${showDic
 function vTopic(){
   const s=state.subj,tp=state.topic,isEn=s.id==='ingles'||!!s.isIdioma;
   const tab=state.engTab||'ej';
-  const tabs=isEn?`<div class="tab-row">${['ej','dict','fon'].map((k,i)=>{const ls=['🏋️ Ejercicios','🎧 Dictado','🔊 Fonética'][i];return`<button class="tab btn ${tab===k?'active':'inactive'}" style="${tab===k?`background:${s.cl};box-shadow:0 4px 0 ${s.sh};color:white`:''}" onclick="setEngTab('${k}')">${ls}</button>`;}).join('')}</div>`:'';
+  const isLen=s.id==='lengua';
+  const tabs=(isEn||isLen)?`<div class="tab-row">${(isEn?['ej','dict','fon']:['ej','dictlen']).map((k,i)=>{const ls=isEn?['🏋️ Ejercicios','🎧 Dictado','🔊 Fonética'][i]:['🏋️ Ejercicios','🖊️ Dictado'][i];return`<button class="tab btn ${tab===k?'active':'inactive'}" style="${tab===k?`background:${s.cl};box-shadow:0 4px 0 ${s.sh};color:white`:''}" onclick="setEngTab('${k}')">${ls}</button>`;}).join('')}</div>`:'';
   let content='';
   if(!isEn||tab==='ej'){
     const explBlock=state.loadingExpl?`<div class="card">${spin('Preparando tu clase...')}</div>`:`<div class="card" style="border-top:5px solid ${s.cl}"><div style="display:flex;align-items:center;gap:7px;margin-bottom:12px"><span style="font-size:21px">📖</span><div class="ftit">Explicación</div></div>${rtxt(state.explanation)}</div>`;
@@ -488,6 +489,27 @@ ${state.feedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #
     content=explBlock+exBlock;
   }
   if(isEn&&tab==='dict'){content=`<div class="card" style="border-top:5px solid #C2410C"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="display:flex;align-items:center;gap:7px"><span style="font-size:21px">🎧</span><div class="ftit">Dictado</div></div><div style="display:flex;gap:6px"><button class="btn b-red" style="font-size:11px;padding:5px 10px" onclick="moreDict()">➕ Más</button><button class="btn b-red" onclick="genDict()">🔄 Nuevas</button></div></div>${state.loadingDict?spin('Preparando dictado...'):''}${(state.dictItems||[]).map((st,i)=>`<div style="background:rgba(245,158,11,.12);border:1.5px solid #FCD34D;border-radius:11px;padding:10px;margin-bottom:9px"><div style="display:flex;align-items:center;gap:7px;margin-bottom:7px"><button class="btn b-red" onclick="spkDict('${st.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">🔊 Escuchar</button><span style="font-size:11px;color:#78350F;font-weight:700">Oración ${i+1}</span></div><input class="inp" value="${(state.dictAnswers[i]||'').replace(/"/g,'&quot;')}" placeholder="Escribí lo que oíste..." oninput="setDictAns(${i},this.value)" style="margin:0;font-size:13px"></div>`).join('')}${state.dictItems&&state.dictItems.length&&!state.loadingDict?`<button class="btn b-grn" style="width:100%;margin-top:3px" onclick="verifyDict()">✅ Verificar dictado</button>`:''}${state.dictFeedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:9px;font-size:13px;line-height:1.7">${state.dictFeedback.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}</div>`:''}</div>`;}
+  if(isLen&&tab==='dictlen'){
+    const cl=s.cl,sh=s.sh,bd=s.bd;
+    content=`<div class="card" style="border-top:5px solid ${cl}">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+  <div style="display:flex;align-items:center;gap:7px"><span style="font-size:21px">🖊️</span><div class="ftit">Dictado</div></div>
+  <div style="display:flex;gap:6px">
+    <button class="btn" style="background:linear-gradient(135deg,${cl},${bd});box-shadow:0 4px 0 ${sh};color:white;font-size:11px;padding:5px 10px" onclick="moreDictLen()">➕ Más</button>
+    <button class="btn" style="background:linear-gradient(135deg,${cl},${bd});box-shadow:0 4px 0 ${sh};color:white" onclick="genDictLen()">🔄 Nuevas</button>
+  </div>
+</div>
+${state.loadingDict?spin('Preparando dictado...'):''}
+${(state.dictItems||[]).map((st,i)=>`<div style="background:rgba(6,95,70,.12);border:1.5px solid #6EE7B7;border-radius:11px;padding:10px;margin-bottom:9px">
+  <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+    <button class="btn" style="background:linear-gradient(135deg,${cl},${bd});box-shadow:0 4px 0 ${sh};color:white" onclick="spkDict('${st.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','es-AR')">🔊 Escuchar</button>
+    <span style="font-size:11px;color:#065F46;font-weight:700">Oración ${i+1}</span>
+  </div>
+  <input class="inp" value="${(state.dictAnswers[i]||'').replace(/"/g,'&quot;')}" placeholder="Escribí lo que escuchaste..." oninput="setDictAns(${i},this.value)" style="margin:0;font-size:13px">
+</div>`).join('')}
+${state.dictItems&&state.dictItems.length&&!state.loadingDict?`<button class="btn b-grn" style="width:100%;margin-top:3px" onclick="verifyDictLen()">✅ Verificar dictado</button>`:''}
+${state.dictFeedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:9px;font-size:13px;line-height:1.7">${state.dictFeedback.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}</div>`:''}
+</div>`;}
   if(isEn&&tab==='fon'){content=`<div class="card" style="border-top:5px solid #C2410C"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="display:flex;align-items:center;gap:7px"><span style="font-size:21px">🔊</span><div class="ftit">Fonética</div></div><div style="display:flex;gap:6px"><button class="btn b-red" style="font-size:11px;padding:5px 10px" onclick="moreFon()">➕ Más</button><button class="btn b-red" onclick="genFon()">🔄 Nuevas</button></div></div><p style="font-size:12px;color:#A78BFA;margin-bottom:10px">🔊 Escuchá la palabra y elegí cómo se escribe.</p>${state.loadingFon?spin('Preparando fonética...'):''}${(state.fonItems||[]).map((it,i)=>`<div style="background:rgba(245,158,11,.12);border:1.5px solid #FCD34D;border-radius:11px;padding:10px;margin-bottom:9px"><div style="display:flex;align-items:center;gap:7px;margin-bottom:7px"><button class="btn b-red" onclick="spk('${it.word}','en-US',0.58)">🔊 Escuchar</button>${it.hint?`<span style="font-size:11px;color:#78350F;font-style:italic">${it.hint}</span>`:''}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${(it.options||[]).map((op,j)=>`<button class="mc-opt" onclick="setFonAns(${i},${j})" style="background:${state.fonAnswers[i]===j?(j===it.correct?'#10B981':'#EF4444'):'rgba(255,255,255,.95)'};color:${state.fonAnswers[i]===j?'white':'#E9D5FF'}">${op}</button>`).join('')}</div></div>`).join('')}${state.fonItems&&state.fonItems.length&&!state.loadingFon?`<button class="btn b-grn" style="width:100%;margin-top:3px" onclick="verifyFon()">✅ Ver resultados</button>`:''}${state.fonFeedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:9px;font-size:13px;line-height:1.7;white-space:pre-wrap">${state.fonFeedback}</div>`:''}</div>`;}
   const btnsRow=!state.loadingExpl?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:3px"><button class="btn" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 5px 0 ${s.sh};border-radius:12px;padding:12px 8px;font-size:13px;color:white;width:100%" onclick="go('chat')">💬 Preguntame</button><button class="btn b-ind" style="border-radius:12px;padding:12px 8px;font-size:13px;width:100%" onclick="togglePdfMenu()">📄 PDF</button></div><div id="pdfMenu" style="display:none;background:rgba(45,27,105,.6);border-radius:12px;box-shadow:0 4px 22px rgba(0,0,0,.15);border:1.5px solid rgba(139,92,246,.25);padding:6px;margin-top:4px">${[['ambos','📖+✏️ Ambas cosas'],['exp','📖 Solo explicación'],['ej','✏️ Solo ejercicios']].map(([k,l])=>`<button onclick="doPdf('${k}')" style="display:block;width:100%;padding:8px 12px;background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;color:#5B21B6;text-align:left;border-radius:7px">${l}</button>`).join('')}</div>`:'';
   return`<div class="page"><div class="wrap"><button class="back-btn btn" onclick="go('subject')">← Volver</button><div class="hdr" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 6px 18px ${s.cl}40;display:flex;align-items:center;gap:12px;text-align:left"><div style="font-size:38px">${s.ic}</div><div><div style="font-family:'Fredoka One';font-size:20px">${tp.title}</div><div style="font-size:12px;opacity:.82">${s.n}</div></div></div>${tabs}${content}${btnsRow}</div></div>`;}
@@ -1244,7 +1266,7 @@ function goTopic(i){
   state.loadingExpl=true;state.loadingEx=false;state.chatMsgs=[];render();loadExpl();}
 
 function setSubjTab(t){state.subjTab=t;render();}
-function setEngTab(t){state.engTab=t;if(t==='dict'&&!state.dictItems.length)genDict();if(t==='fon'&&!state.fonItems.length)genFon();render();}
+function setEngTab(t){state.engTab=t;if(t==='dict'&&!state.dictItems.length)genDict();if(t==='fon'&&!state.fonItems.length)genFon();if(t==='dictlen'&&!state.dictItems.length)genDictLen();render();}
 function setPTab(t){state.parentTab=t;render();}
 function setPSubj(id){state.pSubj=id;render();}
 function setPStudent(id){state.pStudent=id;render();}
@@ -1860,6 +1882,37 @@ o
     await saveStudentData();showCat(name,ok);
   }
   render();}
+
+async function genDictLen(){
+  state.loadingDict=true;state.dictItems=[];state.dictAnswers={};state.dictFeedback='';render();
+  const stu=state.activeStudent;
+  const grade=stu?.grade||'3';
+  const diffs=['simples (3-5 palabras, vocabulario cotidiano)','medias (5-7 palabras, incluí algún sustantivo propio o adjetivo)','más largas (7-10 palabras, incluí signos de puntuación y palabras con tilde)'];
+  const prompt=`Generá 6 oraciones en español para dictado escolar sobre el tema "${state.topic.title}" para un alumno de ${grade}° grado primaria Argentina.
+- Oraciones 1 y 2: ${diffs[0]}
+- Oraciones 3 y 4: ${diffs[1]}
+- Oraciones 5 y 6: ${diffs[2]}
+Una oración por línea, sin numeración, sin guiones.`;
+  const r=await ai([{role:'user',content:prompt}],'Maestra de Lengua argentina. Solo oraciones, sin comentarios.',600);
+  state.dictItems=r.split('\n').map(l=>l.trim().replace(/^[-*\d.)\s]+/,'')).filter(l=>l.length>4&&l.length<150).slice(0,6);
+  state.loadingDict=false;render();
+}
+
+async function moreDictLen(){
+  state.loadingDict=true;render();
+  const stu=state.activeStudent;const grade=stu?.grade||'3';
+  const r=await ai([{role:'user',content:`3 oraciones NUEVAS en español sobre "${state.topic.title}" para ${grade}° grado, distintas a: ${state.dictItems.join(' / ')}. Progresión de dificultad. Sin numeración.`}],'Maestra de Lengua argentina. Solo oraciones.',400);
+  const nuevas=r.split('\n').map(l=>l.trim().replace(/^[-*\d.)\s]+/,'')).filter(l=>l.length>4&&l.length<150).slice(0,3);
+  state.dictItems=[...state.dictItems,...nuevas];state.loadingDict=false;render();
+}
+
+async function verifyDictLen(){
+  state.loadingDict=true;render();
+  const ps=state.dictItems.map((s,i)=>`Original: "${s}" | ${state.activeStudent?.name||'Alumno'}: "${state.dictAnswers[i]||'(vacío)'}"`).join('\n');
+  const r=await ai([{role:'user',content:ps}],`Maestra de Lengua ${gradeStr()}. Corregí el dictado con emojis, indicando errores de ortografía y tildes. Si la mayoría está correcta, EMPEZÁ con "EXCELENTE". En español.`,600);
+  state.dictFeedback=r;state.loadingDict=false;render();
+  if(/excelente|muy bien/i.test(r)){state.stars+=2;await saveStudentData();showCat(state.activeStudent?.name,2);}
+}
 
 async function genDict(){state.loadingDict=true;state.dictItems=[];state.dictAnswers={};state.dictFeedback='';render();
 const ln=state.subj?.n||'Inglés';
