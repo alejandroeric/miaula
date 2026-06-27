@@ -1184,6 +1184,7 @@ function checkQuickReview(){
   render();
 }
 function go(v){
+  try{window.speechSynthesis.cancel();}catch{}
   state.view=v;
   if(v==='parent'&&!state.parentAuthed)state.loginErr=false;
   if(v==='chat'&&!state.chatMsgs.length&&state.topic)state.chatMsgs=[{role:'assistant',text:`¡Hola! 😊 Estoy acá para ayudarte con <strong>${state.topic.title}</strong>. ¿Qué parte no entendiste?`}];
@@ -1887,22 +1888,27 @@ async function genDictLen(){
   state.loadingDict=true;state.dictItems=[];state.dictAnswers={};state.dictFeedback='';render();
   const stu=state.activeStudent;
   const grade=stu?.grade||'3';
+  const usadas=(state.usedExercises||[]).slice(-6).join(' / ');
+  const noRepetir=usadas?`\nNO repitas estas oraciones ya usadas: ${usadas}`:'';
   const diffs=['simples (3-5 palabras, vocabulario cotidiano)','medias (5-7 palabras, incluí algún sustantivo propio o adjetivo)','más largas (7-10 palabras, incluí signos de puntuación y palabras con tilde)'];
   const prompt=`Generá 6 oraciones en español para dictado escolar sobre el tema "${state.topic.title}" para un alumno de ${grade}° grado primaria Argentina.
 - Oraciones 1 y 2: ${diffs[0]}
 - Oraciones 3 y 4: ${diffs[1]}
 - Oraciones 5 y 6: ${diffs[2]}
-Una oración por línea, sin numeración, sin guiones.`;
+Una oración por línea, sin numeración, sin guiones.${noRepetir}`;
   const r=await ai([{role:'user',content:prompt}],'Maestra de Lengua argentina. Solo oraciones, sin comentarios.',600);
-  state.dictItems=r.split('\n').map(l=>l.trim().replace(/^[-*\d.)\s]+/,'')).filter(l=>l.length>4&&l.length<150).slice(0,6);
-  state.loadingDict=false;render();
+  const items=r.split('\n').map(l=>l.trim().replace(/^[-*\d.)\s]+/,'')).filter(l=>l.length>4&&l.length<150).slice(0,6);
+  items.forEach(it=>{if(!state.usedExercises)state.usedExercises=[];state.usedExercises.push(it.substring(0,60));});
+  state.dictItems=items;state.loadingDict=false;render();
 }
 
 async function moreDictLen(){
   state.loadingDict=true;render();
   const stu=state.activeStudent;const grade=stu?.grade||'3';
-  const r=await ai([{role:'user',content:`3 oraciones NUEVAS en español sobre "${state.topic.title}" para ${grade}° grado, distintas a: ${state.dictItems.join(' / ')}. Progresión de dificultad. Sin numeración.`}],'Maestra de Lengua argentina. Solo oraciones.',400);
+  const usadas=[...state.dictItems,...(state.usedExercises||[]).slice(-4)].join(' / ');
+  const r=await ai([{role:'user',content:`3 oraciones NUEVAS en español sobre "${state.topic.title}" para ${grade}° grado, distintas a: ${usadas}. Progresión de dificultad. Sin numeración.`}],'Maestra de Lengua argentina. Solo oraciones.',400);
   const nuevas=r.split('\n').map(l=>l.trim().replace(/^[-*\d.)\s]+/,'')).filter(l=>l.length>4&&l.length<150).slice(0,3);
+  nuevas.forEach(it=>{if(!state.usedExercises)state.usedExercises=[];state.usedExercises.push(it.substring(0,60));});
   state.dictItems=[...state.dictItems,...nuevas];state.loadingDict=false;render();
 }
 
