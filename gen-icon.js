@@ -9,29 +9,29 @@ function genIcon(size) {
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, size, size);
 
-  // M violeta — ocupa casi todo el ancho
+  // M violeta
   ctx.fillStyle = '#7C3AED';
-  ctx.font = `900 ${size * 0.62}px Arial`;
+  ctx.font = `900 ${size * 0.50}px Arial`;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('M', size * 0.58, size * 0.72);
+  ctx.fillText('M', size * 0.55, size * 0.65);
 
   // A dorada
   ctx.fillStyle = '#FCD34D';
-  ctx.font = `900 ${size * 0.43}px Arial`;
+  ctx.font = `900 ${size * 0.35}px Arial`;
   ctx.textAlign = 'left';
-  ctx.fillText('A', size * 0.59, size * 0.72);
+  ctx.fillText('A', size * 0.56, size * 0.65);
 
   // Línea dorada
   ctx.fillStyle = '#FCD34D';
-  ctx.fillRect(size * 0.06, size * 0.76, size * 0.88, size * 0.04);
+  ctx.fillRect(size * 0.08, size * 0.70, size * 0.84, size * 0.035);
 
   // MI AULA
   ctx.fillStyle = '#1E1B4B';
-  ctx.font = `900 ${size * 0.1}px Arial`;
+  ctx.font = `900 ${size * 0.09}px Arial`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('MI AULA', size * 0.5, size * 0.9);
+  ctx.fillText('MI AULA', size * 0.5, size * 0.86);
 
   return c.toBuffer('image/png');
 }
