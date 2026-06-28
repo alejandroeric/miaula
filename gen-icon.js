@@ -4,34 +4,52 @@ const fs = require('fs');
 function genIcon(size) {
   const c = createCanvas(size, size);
   const ctx = c.getContext('2d');
+  const cx = size / 2;
 
-  // Fondo blanco
-  ctx.fillStyle = '#FFFFFF';
+  // Fondo lila muy suave
+  ctx.fillStyle = '#FDF4FF';
   ctx.fillRect(0, 0, size, size);
 
-  // M violeta
+  // Pill violeta centrado
+  const pillW = size * 0.70;
+  const pillH = size * 0.42;
+  const pillX = cx - pillW / 2;
+  const pillY = size * 0.20;
+  const r = pillH * 0.28;
+
   ctx.fillStyle = '#7C3AED';
-  ctx.font = `900 ${size * 0.38}px Arial`;
+  ctx.beginPath();
+  ctx.moveTo(pillX + r, pillY);
+  ctx.lineTo(pillX + pillW - r, pillY);
+  ctx.quadraticCurveTo(pillX + pillW, pillY, pillX + pillW, pillY + r);
+  ctx.lineTo(pillX + pillW, pillY + pillH - r);
+  ctx.quadraticCurveTo(pillX + pillW, pillY + pillH, pillX + pillW - r, pillY + pillH);
+  ctx.lineTo(pillX + r, pillY + pillH);
+  ctx.quadraticCurveTo(pillX, pillY + pillH, pillX, pillY + pillH - r);
+  ctx.lineTo(pillX, pillY + r);
+  ctx.quadraticCurveTo(pillX, pillY, pillX + r, pillY);
+  ctx.closePath();
+  ctx.fill();
+
+  // M blanca dentro del pill
+  ctx.fillStyle = 'white';
+  ctx.font = `900 ${size * 0.30}px Arial`;
   ctx.textAlign = 'right';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('M', size * 0.54, size * 0.58);
+  ctx.textBaseline = 'middle';
+  ctx.fillText('M', cx - size * 0.02, pillY + pillH / 2);
 
-  // A dorada
+  // A dorada dentro del pill
   ctx.fillStyle = '#FCD34D';
-  ctx.font = `900 ${size * 0.26}px Arial`;
+  ctx.font = `900 ${size * 0.21}px Arial`;
   ctx.textAlign = 'left';
-  ctx.fillText('A', size * 0.55, size * 0.58);
+  ctx.fillText('A', cx, pillY + pillH / 2);
 
-  // Línea dorada
-  ctx.fillStyle = '#FCD34D';
-  ctx.fillRect(size * 0.10, size * 0.63, size * 0.80, size * 0.03);
-
-  // MI AULA
-  ctx.fillStyle = '#1E1B4B';
+  // MI AULA abajo
+  ctx.fillStyle = '#7C3AED';
   ctx.font = `900 ${size * 0.09}px Arial`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('MI AULA', size * 0.5, size * 0.80);
+  ctx.fillText('MI AULA', cx, size * 0.80);
 
   return c.toBuffer('image/png');
 }
