@@ -1,0 +1,17 @@
+{
+  "name": "Mi Aula",
+  "short_name": "MiAula",
+  "description": "App educativa para nivel primario",
+  "start_url": "/miaula/",
+  "display": "standalone",
+  "background_color": "#1E1B4B",
+  "theme_color": "#7C3AED",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
