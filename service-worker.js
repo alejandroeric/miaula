@@ -1,4 +1,4 @@
-const CACHE = 'miaula-v2';
+const CACHE = 'miaula-v3';
 const ASSETS = [
   '/miaula/',
   '/miaula/index.html',
