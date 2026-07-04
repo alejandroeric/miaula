@@ -1789,10 +1789,11 @@ Mezclar verdadero y falso. ${diffHintEs}`;
   const usedHint=state.usedExercises.length>0?`\n${isIngles?'AVOID repeating these already-used exercise themes':'EVITÁ repetir estos temas ya usados'}: ${state.usedExercises.slice(-6).join(' | ')}`:'';
   let prompt,sys;
   if(isIngles){
-    prompt=`Create 3 exercises STRICTLY about "${state.topic.title}" in ${langName}. Type: ${tipos[lote]}${usedHint}`;
+    const topicMat=state.topic.photoContent?`\n\nTEACHING MATERIAL (base exercises on this):\n${state.topic.photoContent.substring(0,900)}`:state.topic.desc?`\n\nContext: ${state.topic.desc}`:'';
+    prompt=`Create 3 exercises STRICTLY about "${state.topic.title}" in ${langName}. Type: ${tipos[lote]}${topicMat}${usedHint}`;
     sys=`${langName} teacher for ${gradeStr()}. ${diffHintEn} ABSOLUTE RULES — never break them:
 1. Write ALL exercises IN ${langName.toUpperCase()}. No Spanish in questions or instructions.
-2. ALL exercises MUST be exclusively about "${state.topic.title}". Do NOT switch to another English topic.
+2. ALL exercises MUST be exclusively about "${state.topic.title}". If TEACHING MATERIAL is provided, base ALL exercises on that exact content. Do NOT switch to another English topic.
 3. Use ONLY [__] for blank fields. NEVER use ___ or ... or __ or any other format.
 4. Each exercise MUST have MINIMUM 4 [__] fields. Count them before finishing.
 5. No images, drawings, or visual references.
@@ -1804,10 +1805,12 @@ Exercise X:
 [exercise text in English with minimum 4 [__] fields]
 [Answer: answer1 / answer2 / answer3 / answer4]`;
   } else {
-    prompt=`Creá 3 ejercicios sobre "${state.topic.title}" de ${state.subj.n}. Tipo: ${tipos[lote]}${usedHint}`;
+    const topicMatEs=state.topic.photoContent?`\n\nMATERIAL DE ESTUDIO (basá los ejercicios en esto):\n${state.topic.photoContent.substring(0,900)}`:state.topic.desc?`\n\nContexto: ${state.topic.desc}`:'';
+    prompt=`Creá 3 ejercicios sobre "${state.topic.title}" de ${state.subj.n}. Tipo: ${tipos[lote]}${topicMatEs}${usedHint}`;
     sys=`Maestra ${gradeStr()}. ${diffHintEs} REGLAS ABSOLUTAS que no podés violar:
 1. Usá ÚNICAMENTE [__] para marcar cada campo editable. NUNCA ___ ni ... ni __ ni ningún otro formato.
 2. Cada ejercicio DEBE tener MÍNIMO 4 campos [__]. Contá los [__] antes de terminar.
+3. Si se incluye MATERIAL DE ESTUDIO, todos los ejercicios DEBEN basarse en ese contenido específico.
 3. Sin imágenes, sin dibujos, sin referencias visuales.
 4. Sin nombres propios inventados (no uses "Juan", "María", etc. a menos que el tema lo requiera).
 5. La respuesta NO aparece dentro de la consigna.
