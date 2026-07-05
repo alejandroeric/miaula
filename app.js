@@ -153,7 +153,10 @@ function hideCat(){document.getElementById('catOverlay').classList.remove('show'
 function xpdf(title,subj,expl,parsed){
   const s=state.activeStudent;
   const info=s?`${s.grade}°"${s.course}" · ${s.school} · ${s.province}`:'';
-  const h=(parsed||[]).map((p,i)=>`<div class="ex"><b>Ejercicio ${i+1}</b><br>${p.q.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b>$1</b>')}<br><br><em style="color:green">✅ Respuesta: ${p.a}</em></div>`).join('');
+  const h=(parsed||[]).map((p,i)=>{
+    const qFmt=p.q.replace(/\[__\]/g,'<span style="display:inline-block;min-width:80px;border-bottom:1.5px solid #555;margin:0 3px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b>$1</b>');
+    return`<div class="ex"><b>Ejercicio ${i+1}</b><br><br>${qFmt}<br><br><div style="border:1px dashed #aaa;border-radius:6px;min-height:56px;margin:10px 0;padding:6px"></div><em style="color:green;font-size:12px">✅ Respuesta: ${p.a}</em></div>`;
+  }).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title><style>body{font-family:Arial;max-width:700px;margin:30px auto;font-size:14px;line-height:1.7;color:#333}h1{color:#5B21B6;border-bottom:3px solid #A855F7;padding-bottom:8px}.box{background:rgba(109,40,217,.2);border-radius:10px;padding:16px;margin:14px 0}.ex{background:rgba(109,40,217,.25);border-left:4px solid #7C3AED;padding:12px;border-radius:8px;margin:10px 0}button{background:#7C3AED;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;margin-top:14px}@media print{button{display:none}}</style></head><body><h1>${title}</h1><p style="color:#7C3AED">${subj} · ${info}</p>${expl?`<div class="box"><h2 style="color:#7C3AED">📖 Explicación</h2>${expl.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b>$1</b>')}</div>`:''}${h?`<div class="box"><h2 style="color:#7C3AED">✏️ Ejercicios</h2>${h}</div>`:''}<button onclick="window.print()">🖨️ Imprimir</button></body></html>`;
   try{const bl=new Blob([html],{type:'text/html;charset=utf-8'});if(!window.open(URL.createObjectURL(bl),'_blank'))alert('Permitir ventanas emergentes.');}catch{alert('Error.');}
 }
