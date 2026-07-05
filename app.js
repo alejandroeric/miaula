@@ -1638,8 +1638,8 @@ Ejercicio X:
 [ejercicio según plantilla con [__]]
 [Respuesta: resp1 / resp2 / resp3 / resp4]`,1100);
 
-  const pts=r.split(/Ejercicio\s+\d+:/i).map(p=>p.trim()).filter(p=>p.length>10);
-  state.exParsed=[...state.exParsed,...(pts.length>=2?pts:[r]).map(parseEx)];
+  const pts=r.split(/Ejercicio\s+\d+:/i).map(p=>p.trim()).filter(p=>p.length>10&&p.includes('[__]'));
+  state.exParsed=[...state.exParsed,...(pts.length>=1?pts:[r]).map(parseEx)];
   state.exBatch+=3;state.loadingEx=false;render();
 }
 
@@ -1681,8 +1681,8 @@ Formato:
 Ejercicio X:
 [ejercicio con mínimo 4 campos [__]]
 [Respuesta: resp1 / resp2 / resp3 / resp4]`,1000);
-  const pts=r.split(/Ejercicio\s+\d+:/i).map(p=>p.trim()).filter(p=>p.length>10);
-  state.exParsed=[...state.exParsed,...(pts.length>=2?pts:[r]).map(parseEx)];
+  const pts=r.split(/Ejercicio\s+\d+:/i).map(p=>p.trim()).filter(p=>p.length>10&&p.includes('[__]'));
+  state.exParsed=[...state.exParsed,...(pts.length>=1?pts:[r]).map(parseEx)];
   state.exBatch+=3;state.loadingEx=false;render();
 }
 
@@ -1822,8 +1822,8 @@ Ejercicio X:
 [Respuesta: respuesta1 / respuesta2 / respuesta3 / respuesta4]`;
   }
   const r=await ai([{role:'user',content:prompt}],sys,1000);
-  const pts=r.split(/(?:Exercise|Ejercicio)\s+\d+:/i).map(p=>p.trim()).filter(p=>p.length>10);
-  const parsed=(pts.length>=2?pts:[r]).map(parseEx);
+  const pts=r.split(/(?:Exercise|Ejercicio)\s+\d+:/i).map(p=>p.trim()).filter(p=>p.length>10&&p.includes('[__]'));
+  const parsed=(pts.length>=1?pts:[r]).map(parseEx);
   parsed.forEach(p=>{if(p.q&&p.q.length>10)state.usedExercises.push(p.q.substring(0,60));});
   state.exParsed=[...state.exParsed,...parsed];
   state.exBatch+=3;state.loadingEx=false;render();}
