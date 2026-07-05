@@ -1894,7 +1894,9 @@ async function genDictLen(){
   const usadas=(state.usedExercises||[]).slice(-6).join(' / ');
   const noRepetir=usadas?`\nNO repitas estas oraciones ya usadas: ${usadas}`:'';
   const diffs=['simples (3-5 palabras, vocabulario cotidiano)','medias (5-7 palabras, incluí algún sustantivo propio o adjetivo)','más largas (7-10 palabras, incluí signos de puntuación y palabras con tilde)'];
-  const prompt=`Generá 6 oraciones en español para dictado escolar sobre el tema "${state.topic.title}" para un alumno de ${grade}° grado primaria Argentina.
+  const matLen=state.topic.photoContent?`\nMATERIAL DEL TEMA:\n${state.topic.photoContent.substring(0,600)}`:'';
+  const prompt=`Generá 6 oraciones en español para dictado escolar que practiquen "${state.topic.title}" para un alumno de ${grade}° grado primaria Argentina.
+IMPORTANTE: Las oraciones deben ser naturales y practicar el concepto — NO deben nombrar ni explicar el título del tema.${matLen}
 - Oraciones 1 y 2: ${diffs[0]}
 - Oraciones 3 y 4: ${diffs[1]}
 - Oraciones 5 y 6: ${diffs[2]}
@@ -1909,7 +1911,7 @@ async function moreDictLen(){
   state.loadingDict=true;render();
   const stu=state.activeStudent;const grade=stu?.grade||'3';
   const usadas=[...state.dictItems,...(state.usedExercises||[]).slice(-4)].join(' / ');
-  const r=await ai([{role:'user',content:`3 oraciones NUEVAS en español sobre "${state.topic.title}" para ${grade}° grado, distintas a: ${usadas}. Progresión de dificultad. Sin numeración.`}],'Maestra de Lengua argentina. Solo oraciones.',400);
+  const r=await ai([{role:'user',content:`3 oraciones NUEVAS en español que practiquen "${state.topic.title}" para ${grade}° grado, distintas a: ${usadas}. Oraciones naturales, NO nombrar el tema. Progresión de dificultad. Sin numeración.`}],'Maestra de Lengua argentina. Solo oraciones.',400);
   const nuevas=r.split('\n').map(l=>l.trim().replace(/^[-*\d.)\s]+/,'')).filter(l=>l.length>4&&l.length<150).slice(0,3);
   nuevas.forEach(it=>{if(!state.usedExercises)state.usedExercises=[];state.usedExercises.push(it.substring(0,60));});
   state.dictItems=[...state.dictItems,...nuevas];state.loadingDict=false;render();
@@ -1925,12 +1927,13 @@ async function verifyDictLen(){
 
 async function genDict(){state.loadingDict=true;state.dictItems=[];state.dictAnswers={};state.dictFeedback='';render();
 const ln=state.subj?.n||'Inglés';
-const r=await ai([{role:'user',content:`5 oraciones en ${ln} (5-7 palabras) sobre "${state.topic.title}". Una por línea, sin numeración.`}],`${ln} teacher 3rd grade Argentina. Simple sentences.`,500);
+const topicCtxDict=state.topic.photoContent?`\nTEACHING MATERIAL:\n${state.topic.photoContent.substring(0,500)}`:'';
+const r=await ai([{role:'user',content:`5 sentences in ${ln} (5-7 words) that naturally practice "${state.topic.title}". Natural sentences — do NOT mention the topic title literally. One per line, no numbering.${topicCtxDict}`}],`${ln} teacher 3rd grade Argentina. Simple natural sentences only.`,500);
 state.dictItems=r.split('\n').map(l=>l.trim().replace(/^[-*\d.]\s*/,'')).filter(l=>l.length>3&&l.length<100).slice(0,5);state.loadingDict=false;render();}
 
 async function moreDict(){state.loadingDict=true;render();
 const ln=state.subj?.n||'Inglés';
-const r=await ai([{role:'user',content:`5 oraciones NUEVAS en ${ln} sobre "${state.topic.title}", distintas a: ${state.dictItems.join(' / ')}.`}],`${ln} teacher. Simple sentences.`,400);
+const r=await ai([{role:'user',content:`5 NEW sentences in ${ln} that practice "${state.topic.title}", different from: ${state.dictItems.join(' / ')}. Natural sentences — do NOT mention the topic title literally.`}],`${ln} teacher. Simple natural sentences only.`,400);
 state.dictItems=[...state.dictItems,...r.split('\n').map(l=>l.trim().replace(/^[-*\d.]\s*/,'')).filter(l=>l.length>3&&l.length<100).slice(0,5)];state.loadingDict=false;render();}
 
 async function verifyDict(){state.loadingDict=true;
@@ -1942,14 +1945,15 @@ if(/excelente|muy bien/i.test(r)){state.stars+=2;await saveStudentData();showCat
 
 async function genFon(){state.loadingFon=true;state.fonItems=[];state.fonAnswers={};state.fonFeedback='';render();
 const ln=state.subj?.n||'Inglés';
-const r=await ai([{role:'user',content:`5 palabras en ${ln} de "${state.topic.title}". JSON SOLO:\n[{"word":"cat","hint":"animal","options":["ket","cat","kat"],"correct":1}]`}],`${ln} teacher. ONLY JSON array.`,500);
+const topicCtxFon=state.topic.photoContent?` Topic material: ${state.topic.photoContent.substring(0,300)}`:'';
+const r=await ai([{role:'user',content:`5 ${ln} words related to the topic "${state.topic.title}".${topicCtxFon} JSON ONLY:\n[{"word":"cat","hint":"animal","options":["ket","cat","kat"],"correct":1}]`}],`${ln} teacher. ONLY JSON array, no extra text.`,500);
 try{state.fonItems=JSON.parse(r.replace(/```json|```/g,'').trim()).slice(0,5);}catch{state.fonItems=[{word:'hello',hint:'saludo',options:['helo','hello','jello'],correct:1}];}
 state.loadingFon=false;render();}
 
 async function moreFon(){state.loadingFon=true;render();
 const ln=state.subj?.n||'Inglés';
 const ex=(state.fonItems||[]).map(it=>it.word).join(', ');
-const r=await ai([{role:'user',content:`5 palabras NUEVAS en ${ln} distintas a: ${ex}. JSON SOLO:\n[{"word":"dog","hint":"animal","options":["dag","dog","dug"],"correct":1}]`}],`${ln} teacher. ONLY JSON array.`,500);
+const r=await ai([{role:'user',content:`5 NEW ${ln} words related to "${state.topic.title}", different from: ${ex}. JSON ONLY:\n[{"word":"dog","hint":"animal","options":["dag","dog","dug"],"correct":1}]`}],`${ln} teacher. ONLY JSON array, no extra text.`,500);
 try{state.fonItems=[...state.fonItems,...JSON.parse(r.replace(/```json|```/g,'').trim()).slice(0,5)];}catch{}state.loadingFon=false;render();}
 
 function verifyFon(){if(!state.fonItems?.length)return;const ok=state.fonItems.filter((it,i)=>state.fonAnswers[i]===it.correct).length;const pc=Math.round(ok/state.fonItems.length*100);
