@@ -24,6 +24,7 @@ let state={
   topics:ET(),tasks:ET(),stars:0,
   calendar:[],parentPin:PIN0,parentAuthed:false,
   chatMsgs:[],exParsed:[],answers:{},exResults:null,exBatch:0,explanation:'',examPoints:null,currentExamEj:null,usedExercises:[],revealedAnswers:{},exFormat:'completar',mcAnswers:{},vofAnswers:{},exFormatData:[],mcChecked:false,vofChecked:false,exDifficulty:0,
+  mathItems:[],mathAnswers:{},mathResults:null,
   streak:0,lastStudyDate:'',achievements:[],topicProgress:{},
   quickReview:false,quickItems:[],quickIdx:0,quickAnswers:{},quickResults:null,loadingQuick:false,
   dictItems:[],dictAnswers:{},fonItems:[],fonAnswers:{},engTab:'ej',
@@ -453,8 +454,10 @@ function vTopic(){
 ${extraInput}${bankHtml}${ansBtn}${rh}</div>`;}).join('');
     // ── Selector de formato ──
     const exFmt=state.exFormat||'completar';
+    const isMath=s.id==='matematica';
+    const fmtOpts=isMath?[['completar','🔢 Resolver'],['multiple','☑️ Múltiple opción'],['vof','✅ V o F']]:[['completar','🖊️ Completar'],['multiple','☑️ Múltiple opción'],['vof','✅ V o F']];
     const fmtSel=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-${[['completar','🖊️ Completar'],['multiple','☑️ Múltiple opción'],['vof','✅ V o F']].map(([f,l])=>{const act=exFmt===f;return`<button onclick="setExFormat('${f}')" style="border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;background:${act?'linear-gradient(135deg,#7C3AED,#A855F7)':'rgba(109,40,217,.2)'};color:${act?'white':'#C4B5FD'};box-shadow:${act?'0 3px 0 #4C1D95':'none'}">${l}</button>`;}).join('')}
+${fmtOpts.map(([f,l])=>{const act=exFmt===f;return`<button onclick="setExFormat('${f}')" style="border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;background:${act?'linear-gradient(135deg,#7C3AED,#A855F7)':'rgba(109,40,217,.2)'};color:${act?'white':'#C4B5FD'};box-shadow:${act?'0 3px 0 #4C1D95':'none'}">${l}</button>`;}).join('')}
 </div>`;
     // ── Contenido según formato ──
     let fmtBody='';
@@ -480,7 +483,13 @@ ${[['completar','🖊️ Completar'],['multiple','☑️ Múltiple opción'],['v
   ${starsHtml()}
 </div>
 ${fmtSel}
-${exFmt==='completar'?`${state.exParsed.length===0&&!state.loadingEx?spin('Preparando ejercicios...'):''}
+${exFmt==='completar'?isMath?`${state.mathItems.length===0&&!state.loadingEx?spin('Preparando ejercicios...'):''}
+${(state.mathItems||[]).map((it,i)=>renderMathItem(it,i)).join('')}
+${state.mathResults?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:14px;margin-top:10px;text-align:center"><div style="font-family:'Fredoka One';font-size:26px;color:#E9D5FF">🏆 ${state.mathResults.ok} / ${state.mathResults.total}</div><div style="font-size:13px;color:#C4B5FD;margin-top:4px">${state.mathResults.ok===state.mathResults.total?'¡Perfecta! 🌟':state.mathResults.ok>=Math.ceil(state.mathResults.total*.6)?'¡Muy bien! 💪':'¡Buen intento! 😊'}</div></div>`:''}
+${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
+  <button class="btn b-vio" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 5px 0 ${s.sh}" onclick="moreEx()">🔄 Más ejercicios</button>
+  ${!state.mathResults&&state.mathItems.length>0?`<button class="btn b-grn" onclick="verifyMath()">✅ Ver resultados</button>`:''}
+</div>`}`:`${state.exParsed.length===0&&!state.loadingEx?spin('Preparando ejercicios...'):''}
 ${exItems}
 ${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
   <button class="btn b-vio" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 5px 0 ${s.sh}" onclick="moreEx()">🔄 Más ejercicios</button>
@@ -1264,7 +1273,7 @@ function goTask(i){
 
 function goTopic(i){
   state.topic=state.topics[state.subj.id][i];state.view='topic';
-  state.explanation='';state.exParsed=[];state.answers={};state.exBatch=0;state.feedback='';state.exResults=null;
+  state.explanation='';state.exParsed=[];state.answers={};state.exBatch=0;state.feedback='';state.exResults=null;state.mathItems=[];state.mathAnswers={};state.mathResults=null;
   state.usedExercises=[];state.revealedAnswers={};state.exFormat='completar';state.mcAnswers={};state.vofAnswers={};state.exFormatData=[];state.mcChecked=false;state.vofChecked=false;state.exDifficulty=0;
   state.engTab='ej';state.dictItems=[];state.dictAnswers={};state.dictFeedback='';state.fonItems=[];state.fonAnswers={};state.fonFeedback='';
   state.loadingExpl=true;state.loadingEx=false;state.chatMsgs=[];render();loadExpl();}
@@ -1690,6 +1699,7 @@ Ejercicio X:
 }
 
 async function genEx(){
+  if(state.subj.id==='matematica'&&(state.exFormat||'completar')==='completar'){genMathEx();return;}
   state.loadingEx=true;render();
   const isIngles=state.subj.id==='ingles'||!!state.subj.isIdioma;
   const langName=state.subj.n||'Inglés';
@@ -1831,12 +1841,78 @@ Ejercicio X:
   state.exParsed=[...state.exParsed,...parsed];
   state.exBatch+=3;state.loadingEx=false;render();}
 
+// ── MATEMÁTICA: render pizarrón ────────────────────────
+function renderMathItem(it,i){
+  const res=state.mathResults;
+  const ans=state.mathAnswers[i]||'';
+  const correct=res?String(it.resultado).trim()===String(ans).trim():null;
+  const cardBorder=correct===null?'rgba(139,92,246,.3)':correct?'rgba(16,185,129,.5)':'rgba(239,68,68,.4)';
+  const feedback=correct===null?'':correct?`<div style="margin-top:10px;background:rgba(16,185,129,.15);border-radius:10px;padding:9px 12px;font-size:13px;color:#6EE7B7">✅ ¡Correcto! 🌟</div>`:`<div style="margin-top:10px;background:rgba(239,68,68,.12);border-radius:10px;padding:9px 12px;font-size:13px;color:#FCA5A5">❌ La respuesta era <strong>${it.resultado}</strong></div>`;
+  const inp=`<input class="inp" value="${ans.replace(/"/g,'&quot;')}" placeholder="?" oninput="setMathAns(${i},this.value)" style="margin:0;width:90px;text-align:center;font-size:18px;font-weight:800" ${res?'disabled':''}>`;
+  let body='';
+  if(it.tipo==='problema'||it.tipo==='problem'){
+    body=`<div style="font-size:14px;color:#E9D5FF;line-height:1.8;margin-bottom:14px">${it.enunciado}</div>
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:13px;font-weight:700;color:#A78BFA">Resultado:</span>${inp}</div>`;
+  } else {
+    const ops={suma:'+',resta:'−',multiplicacion:'×',division:'÷'};
+    const op=ops[it.tipo]||it.tipo;
+    const numStyle='font-size:28px;font-weight:900;color:#E9D5FF;font-family:monospace;letter-spacing:2px';
+    const opStyle='font-size:24px;font-weight:900;color:#A78BFA;font-family:monospace';
+    body=`<div style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:4px;background:rgba(45,27,105,.5);border-radius:14px;padding:16px 24px;min-width:140px">
+  <div style="${numStyle}">${it.a}</div>
+  <div style="display:flex;align-items:center;gap:8px;width:100%;justify-content:space-between"><span style="${opStyle}">${op}</span><span style="${numStyle}">${it.b}</span></div>
+  <div style="width:100%;height:2px;background:rgba(139,92,246,.6);border-radius:2px;margin:4px 0"></div>
+  ${inp}
+</div>`;
+  }
+  return`<div class="ex-card" style="background:rgba(45,27,105,.45);border-color:${cardBorder};margin-bottom:12px">
+<div style="font-weight:800;font-size:11px;color:#A78BFA;margin-bottom:12px;letter-spacing:.5px">EJERCICIO ${i+1}</div>
+${body}${feedback}</div>`;}
+
+function setMathAns(i,v){state.mathAnswers[i]=v;}
+
+function verifyMath(){
+  const total=state.mathItems.length;
+  const ok=state.mathItems.filter((it,i)=>String(it.resultado).trim()===String(state.mathAnswers[i]||'').trim()).length;
+  state.mathResults={ok,total};
+  if(ok===total){state.stars+=3;}else if(ok>=Math.ceil(total*.6)){state.stars+=1;}
+  saveStudentData();showCat(state.activeStudent?.name,ok);
+  render();}
+
+async function genMathEx(){
+  state.loadingEx=true;state.mathItems=[];state.mathAnswers={};state.mathResults=null;render();
+  const grade=state.activeStudent?.grade||'3';
+  const tp=state.topic;
+  const matCtx=tp.photoContent?`\nMaterial del tema:\n${tp.photoContent.substring(0,600)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
+  const r=await ai([{role:'user',content:`Generá 5 ejercicios de matemática para ${grade}° grado sobre "${tp.title}".${matCtx}
+Devolvé SOLO un JSON array, sin texto extra:
+[
+  {"tipo":"suma","a":24,"b":13,"resultado":37},
+  {"tipo":"resta","a":50,"b":18,"resultado":32},
+  {"tipo":"multiplicacion","a":6,"b":7,"resultado":42},
+  {"tipo":"division","a":48,"b":6,"resultado":8},
+  {"tipo":"problema","enunciado":"Valentina tiene 12 manzanas y le regalan 8 más. ¿Cuántas tiene en total?","resultado":20}
+]
+Elegí los tipos adecuados según el tema. Para problemas usá el nombre del alumno: ${state.activeStudent?.name||'el alumno'}.`}],
+  `Maestra de matemática ${grade}° grado Argentina. SOLO JSON array válido, sin markdown, sin explicaciones.`,600);
+  try{
+    const clean=r.replace(/```json|```/g,'').trim();
+    state.mathItems=JSON.parse(clean).slice(0,5).map(it=>{
+      if(it.tipo==='multiplicacion'&&it.b>it.a){const tmp=it.a;it.a=it.b;it.b=tmp;}
+      return it;
+    });
+  }catch{
+    state.mathItems=[{tipo:'problema',enunciado:'Resolvé: 25 + 37 =',resultado:62}];
+  }
+  state.loadingEx=false;render();}
+
 function moreEx(){
   state.exResults=null;state.answers={};state.feedback='';state.revealedAnswers={};state.mcAnswers={};state.vofAnswers={};state.mcChecked=false;state.vofChecked=false;state.exFormatData=[];
+  state.mathItems=[];state.mathAnswers={};state.mathResults=null;
   state.exDifficulty=Math.min((state.exDifficulty||0)+1,5);
-  state.exParsed=[]; // siempre limpiar los ejercicios anteriores
+  state.exParsed=[];
   if(state.view==='task'&&state.task?.isExam){
-    genExamEx(); // exBatch ya avanzó en genExamEx anterior, no resetear
+    genExamEx();
   } else {
     if(state.view==='task')genTaskEx();else genEx();
   }
