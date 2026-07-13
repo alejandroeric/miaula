@@ -1885,20 +1885,21 @@ async function genMathEx(){
   const tp=state.topic;
   const matCtx=tp.photoContent?`\nMaterial del tema:\n${tp.photoContent.substring(0,600)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
   const diff=state.exDifficulty||0;
-  const niveles=[
-    {hint:'NIVEL 1 — Muy fácil: usá SOLO números del 1 al 10. Sin llevadas.',ej:`[{"tipo":"suma","a":7,"b":3,"resultado":10},{"tipo":"resta","a":9,"b":4,"resultado":5},{"tipo":"multiplicacion","a":3,"b":2,"resultado":6},{"tipo":"division","a":8,"b":2,"resultado":4},{"tipo":"problema","enunciado":"${state.activeStudent?.name||'El alumno'} tiene 6 figuritas y le dan 3 más. ¿Cuántas tiene?","resultado":9}]`},
-    {hint:'NIVEL 2 — Fácil: usá números del 10 al 30. Podés incluir una llevada simple.',ej:`[{"tipo":"suma","a":23,"b":15,"resultado":38},{"tipo":"resta","a":28,"b":12,"resultado":16},{"tipo":"multiplicacion","a":5,"b":4,"resultado":20},{"tipo":"division","a":24,"b":3,"resultado":8},{"tipo":"problema","enunciado":"En el aula hay 25 alumnos y llegan 13 más. ¿Cuántos hay ahora?","resultado":38}]`},
-    {hint:'NIVEL 3 — Medio: usá números del 30 al 99. Incluí llevadas.',ej:`[{"tipo":"suma","a":67,"b":45,"resultado":112},{"tipo":"resta","a":83,"b":37,"resultado":46},{"tipo":"multiplicacion","a":8,"b":7,"resultado":56},{"tipo":"division","a":72,"b":9,"resultado":8},{"tipo":"problema","enunciado":"${state.activeStudent?.name||'El alumno'} leyó 48 páginas ayer y 35 hoy. ¿Cuántas leyó en total?","resultado":83}]`},
-    {hint:'NIVEL 4 — Difícil: usá números del 100 al 500. Problemas con dos operaciones.',ej:`[{"tipo":"suma","a":347,"b":256,"resultado":603},{"tipo":"resta","a":412,"b":178,"resultado":234},{"tipo":"multiplicacion","a":45,"b":6,"resultado":270},{"tipo":"division","a":288,"b":9,"resultado":32},{"tipo":"problema","enunciado":"Una librería tiene 320 libros. Vendió 145 y llegaron 78 nuevos. ¿Cuántos tiene ahora?","resultado":253}]`},
-    {hint:'NIVEL 5 — Muy difícil: usá números del 500 al 999. Problemas con múltiples pasos y datos para descartar.',ej:`[{"tipo":"suma","a":783,"b":459,"resultado":1242},{"tipo":"resta","a":902,"b":647,"resultado":255},{"tipo":"multiplicacion","a":87,"b":9,"resultado":783},{"tipo":"division","a":756,"b":7,"resultado":108},{"tipo":"problema","enunciado":"Una fábrica produce 650 piezas por día. En 3 días producen [__] piezas. Si descartan 127 con defectos, ¿cuántas quedan?","resultado":1823}]`}
-  ];
-  const nivel=niveles[Math.min(diff,niveles.length-1)];
-  const r=await ai([{role:'user',content:`Generá 5 ejercicios de matemática para ${grade}° grado sobre "${tp.title}".${matCtx}
-OBLIGATORIO: ${nivel.hint}
-Usá exactamente este formato JSON (con números del nivel indicado, NO del ejemplo):
-${nivel.ej}
-Elegí los tipos adecuados según el tema. Para problemas usá el nombre: ${state.activeStudent?.name||'el alumno'}.`}],
-  `Maestra de matemática ${grade}° grado Argentina. SOLO JSON array válido, sin markdown, sin explicaciones. Respetá ESTRICTAMENTE el rango de números del nivel indicado.`,700);
+  const diffDesc=['igual complejidad que el tema pero en su versión más directa y sencilla','un paso más de complejidad: agregá llevadas o un paso extra en los problemas','complejidad media-alta: números más grandes, problemas con dos operaciones','alta complejidad: problemas con varios pasos, números grandes, algún dato que no se usa','máxima complejidad posible dentro del tema: problemas elaborados, múltiples operaciones encadenadas'];
+  const diffLabel=['Nivel 1','Nivel 2','Nivel 3','Nivel 4','Nivel 5'][Math.min(diff,4)];
+  const diffInstr=diffDesc[Math.min(diff,4)];
+  const r=await ai([{role:'user',content:`Generá 5 ejercicios de matemática para un alumno de ${grade}° grado sobre el tema "${tp.title}".${matCtx}
+
+REGLAS OBLIGATORIAS:
+1. Los ejercicios deben ser 100% apropiados para ${grade}° grado de primaria Argentina — ni más fáciles ni más difíciles de lo que se enseña en ese año.
+2. El tema "${tp.title}" define QUÉ tipo de operaciones hacer. No te salgas del tema.
+3. ${diffLabel} de dificultad dentro del tema: ${diffInstr}.
+4. Para problemas usá situaciones cotidianas y el nombre: ${state.activeStudent?.name||'el alumno'}.
+
+Devolvé SOLO JSON array válido:
+[{"tipo":"suma","a":45,"b":38,"resultado":83},{"tipo":"problema","enunciado":"...","resultado":0}]
+Tipos válidos: suma, resta, multiplicacion, division, problema.`}],
+  `Sos una maestra experta en matemática de ${grade}° grado primaria Argentina. Conocés exactamente qué contenidos y rangos numéricos corresponden a cada grado. SOLO devolvés JSON array válido, sin texto, sin markdown.`,700);
   try{
     const clean=r.replace(/```json|```/g,'').trim();
     state.mathItems=JSON.parse(clean).slice(0,5).map(it=>{
