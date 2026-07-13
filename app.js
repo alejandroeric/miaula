@@ -1884,7 +1884,10 @@ async function genMathEx(){
   const grade=state.activeStudent?.grade||'3';
   const tp=state.topic;
   const matCtx=tp.photoContent?`\nMaterial del tema:\n${tp.photoContent.substring(0,600)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
+  const diff=state.exDifficulty||0;
+  const diffHint=diff===0?'Nivel inicial: números pequeños (1-20), operaciones simples.':diff<=2?'Nivel intermedio: números medianos (hasta 100), podés incluir llevadas y problemas con dos pasos.':'Nivel avanzado: números grandes (hasta 999), operaciones con llevadas, problemas con varios pasos y datos irrelevantes.';
   const r=await ai([{role:'user',content:`Generá 5 ejercicios de matemática para ${grade}° grado sobre "${tp.title}".${matCtx}
+${diffHint}
 Devolvé SOLO un JSON array, sin texto extra:
 [
   {"tipo":"suma","a":24,"b":13,"resultado":37},
