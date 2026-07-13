@@ -1995,26 +1995,28 @@ async function genSpecialEx(){
   const diffDesc=['directos y simples, apropiados para el inicio del tema','con un paso más de análisis','que requieran relacionar conceptos','que requieran comparar o distinguir casos similares','de máxima complejidad, con casos particulares o excepciones'][Math.min(diff,4)];
   const matCtx=tp.photoContent?`\nMATERIAL:\n${tp.photoContent.substring(0,700)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
   const nombre=state.activeStudent?.name||'el alumno';
-  const r=await ai([{role:'user',content:`Generá ejercicios interactivos para ${grade}° grado sobre "${tp.title}" (${s.n}).${matCtx}
+  const r=await ai([{role:'user',content:`Generá ejercicios interactivos de ${s.n} para ${grade}° grado.
+TEMA OBLIGATORIO: "${tp.title}" — TODOS los ejercicios deben ser exclusivamente sobre este tema.${matCtx}
+PROHIBIDO: no uses contenido genérico, no inventes temas distintos, no uses el título del tema como respuesta.
+DIFICULTAD: ${diffDesc}.
 
-Los ejercicios deben ser ${diffDesc}.
-Devolvé SOLO este JSON (sin texto extra, sin markdown):
+Formato JSON estricto — SOLO esto, sin texto extra:
 {
   "ordenar":[
-    {"consigna":"Numerá en el orden correcto (1=primero):","items":["item B","item A","item D","item C"],"correcto":[2,1,4,3]},
-    {"consigna":"Otra consigna de ordenar:","items":["...","...","..."],"correcto":[...]}
+    {"consigna":"[consigna específica sobre ${tp.title}]","items":["[item del tema]","[item del tema]","[item del tema]","[item del tema]"],"correcto":[2,1,4,3]},
+    {"consigna":"[otra consigna sobre ${tp.title}]","items":["[item]","[item]","[item]"],"correcto":[1,3,2]}
   ],
   "clasificar":[
-    {"consigna":"Clasificá cada elemento en su grupo:","grupos":["Grupo 1","Grupo 2"],"items":["x","y","z","w"],"correcta":["Grupo 1","Grupo 2","Grupo 1","Grupo 2"]},
-    {"consigna":"Otra clasificación:","grupos":[...],"items":[...],"correcta":[...]}
+    {"consigna":"[consigna sobre ${tp.title}]","grupos":["[grupo A]","[grupo B]"],"items":["[item]","[item]","[item]","[item]"],"correcta":["[grupo A]","[grupo B]","[grupo A]","[grupo B]"]},
+    {"consigna":"[otra consigna]","grupos":["[grupo]","[grupo]"],"items":["[item]","[item]","[item]","[item]"],"correcta":["[grupo]","[grupo]","[grupo]","[grupo]"]}
   ],
   "unir":[
-    {"consigna":"Uní cada elemento con su par (escribí la letra):","colA":["Elemento 1","Elemento 2","Elemento 3"],"colB":["Par C","Par A","Par B"],"pares":[2,0,1]},
-    {"consigna":"Otro ejercicio de unir:","colA":[...],"colB":[...],"pares":[...]}
+    {"consigna":"[consigna sobre ${tp.title}]","colA":["[elem 1]","[elem 2]","[elem 3]"],"colB":["[par de elem 3]","[par de elem 1]","[par de elem 2]"],"pares":[1,2,0]},
+    {"consigna":"[otra consigna]","colA":["[elem]","[elem]","[elem]"],"colB":["[par]","[par]","[par]"],"pares":[2,0,1]}
   ]
 }
-REGLAS: correcto[i]=número de posición correcta (1=primero). correcta[i]=nombre del grupo correcto. pares[i]=índice en colB que corresponde a colA[i]. Usá contenido real del tema, no ejemplos genéricos.`}],
-  `Maestra experta en ${s.n} para ${grade}° grado primaria Argentina. SOLO JSON válido.`,1200);
+REGLAS TÉCNICAS: correcto[i]=número de posición correcta (1=primero). correcta[i]=nombre exacto del grupo. pares[i]=índice 0-based en colB que corresponde a colA[i].`}],
+  `Sos una maestra experta en ${s.n} para ${grade}° grado primaria Argentina. Tu única tarea es generar ejercicios sobre "${tp.title}". Si el contenido no es directamente sobre ese tema, está MAL. Devolvés SOLO JSON válido, sin markdown, sin texto extra.`,1200);
   try{
     const clean=r.replace(/```json|```/g,'').trim();
     const data=JSON.parse(clean);
