@@ -1707,8 +1707,11 @@ async function genEx(){
 
   // ── MÚLTIPLE OPCIÓN ──
   const diff=state.exDifficulty||0;
-  const diffHintEs=diff===0?'Nivel inicial — preguntas simples y directas.':diff<=2?'Nivel intermedio — preguntas con más contexto y opciones menos obvias.':'Nivel avanzado — preguntas con mayor complejidad conceptual, opciones similares entre sí.';
-  const diffHintEn=diff===0?'Beginner level — simple and direct questions.':diff<=2?'Intermediate level — questions with more context, less obvious options.':'Advanced level — conceptually richer questions, similar-looking options to challenge the student.';
+  const gradeNum=parseInt(state.activeStudent?.grade||'3');
+  const diffStepsEs=['Nivel 1: preguntas de reconocimiento directo, apropiadas para '+gradeNum+'° grado. Opciones incorrectas claramente distintas. El alumno solo necesita recordar.','Nivel 2: preguntas de comprensión para '+gradeNum+'° grado. Opciones incorrectas plausibles pero distinguibles. El alumno necesita entender el concepto.','Nivel 3: preguntas de aplicación para '+gradeNum+'° grado. Opciones muy similares entre sí. El alumno necesita relacionar conceptos.','Nivel 4: preguntas que requieren analizar o comparar para '+gradeNum+'° grado. Opciones que generan confusión real. Requiere dominio del tema.','Nivel 5: máxima complejidad para '+gradeNum+'° grado. Preguntas con casos particulares o excepciones. Solo las responde quien domina profundamente el tema.'];
+  const diffStepsEn=['Level 1: direct recall questions for grade '+gradeNum+'. Wrong options are clearly different. Student only needs to remember.','Level 2: comprehension questions for grade '+gradeNum+'. Plausible but distinguishable wrong options. Student needs to understand.','Level 3: application questions for grade '+gradeNum+'. Very similar options. Student must connect concepts.','Level 4: analysis questions for grade '+gradeNum+'. Options that cause real confusion. Requires solid mastery.','Level 5: maximum complexity for grade '+gradeNum+'. Edge cases and exceptions. Only a student with deep knowledge answers correctly.'];
+  const diffHintEs=diffStepsEs[Math.min(diff,4)];
+  const diffHintEn=diffStepsEn[Math.min(diff,4)];
   if(fmt==='multiple'){
     const usedHint=(state.usedExercises||[]).length>0?`\n${isIngles?'Avoid repeating':'Evitá repetir'}: ${state.usedExercises.slice(-4).join(' | ')}`:'';
     const p=isIngles?`Create 5 multiple-choice questions STRICTLY about "${state.topic.title}" IN ${langName.toUpperCase()}.${usedHint}`
