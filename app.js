@@ -1787,7 +1787,7 @@ Mezclar verdadero y falso. ${diffHintEs}`;
     state.exBatch+=5;state.loadingEx=false;render();return;
   }
 
-  const lote=Math.floor(state.exBatch/3)%4;
+  const lote=isIngles?Math.floor(state.exBatch/3)%4:Math.min(diff,3);
   const tiposEs=[
     `COMPLETAR FRASES: 3 oraciones, cada una con EXACTAMENTE 4 campos [__] distribuidos en la oración. Ejemplo: "El [__] y la [__] son sustantivos. En mi [__] hay muchos [__]."`,
     `ESCRIBIR LISTA: pedí 4 ejemplos del concepto. Usá exactamente 4 campos [__]. Ejemplo: "Escribí 4 sustantivos que conozcas: [__] [__] [__] [__]"`,
