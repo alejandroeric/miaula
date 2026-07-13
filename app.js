@@ -1898,7 +1898,11 @@ Elegí los tipos adecuados según el tema. Para problemas usá el nombre del alu
   try{
     const clean=r.replace(/```json|```/g,'').trim();
     state.mathItems=JSON.parse(clean).slice(0,5).map(it=>{
-      if(it.tipo==='multiplicacion'&&it.b>it.a){const tmp=it.a;it.a=it.b;it.b=tmp;}
+      // Normalizar nombres de campo que la IA puede variar
+      it.a=it.a??it.numero1??it.operando1??it.num1??it.dividendo??'?';
+      it.b=it.b??it.numero2??it.operando2??it.num2??it.divisor??'?';
+      it.resultado=it.resultado??it.result??it.respuesta??'?';
+      if(it.tipo==='multiplicacion'&&Number(it.b)>Number(it.a)){const tmp=it.a;it.a=it.b;it.b=tmp;}
       return it;
     });
   }catch{
