@@ -2000,22 +2000,22 @@ TEMA OBLIGATORIO: "${tp.title}" — TODOS los ejercicios deben ser exclusivament
 PROHIBIDO: no uses contenido genérico, no inventes temas distintos, no uses el título del tema como respuesta.
 DIFICULTAD: ${diffDesc}.
 
-Formato JSON estricto — SOLO esto, sin texto extra:
+Formato JSON estricto — SOLO esto, sin texto extra. Cada ejercicio tiene EXACTAMENTE 3 ítems/pares:
 {
   "ordenar":[
-    {"consigna":"[consigna específica sobre ${tp.title}]","items":["[item del tema]","[item del tema]","[item del tema]","[item del tema]"],"correcto":[2,1,4,3]},
-    {"consigna":"[otra consigna sobre ${tp.title}]","items":["[item]","[item]","[item]"],"correcto":[1,3,2]}
+    {"consigna":"[consigna sobre ${tp.title}]","items":["[item del tema]","[item del tema]","[item del tema]"],"correcto":[2,1,3]},
+    {"consigna":"[otra consigna sobre ${tp.title}]","items":["[item]","[item]","[item]"],"correcto":[3,1,2]}
   ],
   "clasificar":[
-    {"consigna":"[consigna sobre ${tp.title}]","grupos":["[grupo A]","[grupo B]"],"items":["[item]","[item]","[item]","[item]"],"correcta":["[grupo A]","[grupo B]","[grupo A]","[grupo B]"]},
-    {"consigna":"[otra consigna]","grupos":["[grupo]","[grupo]"],"items":["[item]","[item]","[item]","[item]"],"correcta":["[grupo]","[grupo]","[grupo]","[grupo]"]}
+    {"consigna":"[consigna sobre ${tp.title}]","grupos":["[grupo A]","[grupo B]"],"items":["[item]","[item]","[item]","[item]","[item]","[item]"],"correcta":["[grupo A]","[grupo B]","[grupo A]","[grupo B]","[grupo A]","[grupo B]"]},
+    {"consigna":"[otra consigna]","grupos":["[grupo]","[grupo]"],"items":["[item]","[item]","[item]","[item]","[item]","[item]"],"correcta":["[grupo]","[grupo]","[grupo]","[grupo]","[grupo]","[grupo]"]}
   ],
   "unir":[
     {"consigna":"[consigna sobre ${tp.title}]","colA":["[elem 1]","[elem 2]","[elem 3]"],"colB":["[par de elem 3]","[par de elem 1]","[par de elem 2]"],"pares":[1,2,0]},
     {"consigna":"[otra consigna]","colA":["[elem]","[elem]","[elem]"],"colB":["[par]","[par]","[par]"],"pares":[2,0,1]}
   ]
 }
-REGLAS TÉCNICAS: correcto[i]=número de posición correcta (1=primero). correcta[i]=nombre exacto del grupo. pares[i]=índice 0-based en colB que corresponde a colA[i].`}],
+REGLAS TÉCNICAS: correcto[i]=número de posición (1=primero). correcta[i]=nombre exacto del grupo. pares[i]=índice 0-based en colB que corresponde a colA[i]. SIEMPRE 3 ítems en ordenar y unir, 6 ítems en clasificar.`}],
   `Sos una maestra experta en ${s.n} para ${grade}° grado primaria Argentina. Tu única tarea es generar ejercicios sobre "${tp.title}". Si el contenido no es directamente sobre ese tema, está MAL. Devolvés SOLO JSON válido, sin markdown, sin texto extra.`,1200);
   try{
     const clean=r.replace(/```json|```/g,'').trim();
