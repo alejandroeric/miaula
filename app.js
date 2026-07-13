@@ -492,13 +492,13 @@ ${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;f
   ${!state.mathResults&&state.mathItems.length>0?`<button class="btn b-grn" onclick="verifyMath()">✅ Ver resultados</button>`:''}
 </div>`}`:`${state.exParsed.length===0&&!state.loadingEx?spin('Preparando ejercicios...'):''}
 ${exItems}
-${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
-  <button class="btn b-vio" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 5px 0 ${s.sh}" onclick="moreEx()">🔄 Más ejercicios</button>
-  ${!state.exResults&&state.exParsed.length>0?`<button id="verifyBtn" class="btn b-grn" ${state.verifying?'disabled':''} onclick="verifyAnswers()">${state.verifying?'🔄 Corrigiendo...':'✅ Ver resultados'}</button>`:''}
-  ${state.exResults?`<button class="btn b-grn" onclick="moreEx()">➕ Nuevos ejercicios</button>`:''}
-</div>`}
+${!state.exResults&&state.exParsed.length>0&&!state.loadingEx?`<button id="verifyBtn" class="btn b-grn" style="width:100%;margin-top:6px" ${state.verifying?'disabled':''} onclick="verifyAnswers()">${state.verifying?'🔄 Corrigiendo...':'✅ Ver resultados completar'}</button>`:''}
+${state.feedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:10px;font-size:14px;font-weight:700;text-align:center">${state.feedback}</div>`:''}
 ${isExtendedSubj()&&(state.exFormat||'completar')==='completar'?state.loadingSpecial?spin('Preparando ordenar, clasificar y unir...'):state.specialEx?`<div style="margin-top:4px">${renderSpecialEx()}</div>`:'':''}
-${state.feedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:10px;font-size:14px;font-weight:700;text-align:center">${state.feedback}</div>`:''}`:`${fmtBody}`}
+${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">
+  <button class="btn b-vio" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 5px 0 ${s.sh}" onclick="moreEx()">🔄 Más ejercicios</button>
+  ${state.exResults?`<button class="btn b-grn" onclick="moreEx()">➕ Nuevos ejercicios</button>`:''}
+</div>`}`:`${fmtBody}`}
 </div>`:'';
     content=explBlock+exBlock;
   }
@@ -1923,16 +1923,20 @@ Tipos válidos: suma, resta, multiplicacion, division, problema.`}],
   }
   state.loadingEx=false;render();}
 
-function moreEx(){
+async function moreEx(){
   state.exResults=null;state.answers={};state.feedback='';state.revealedAnswers={};state.mcAnswers={};state.vofAnswers={};state.mcChecked=false;state.vofChecked=false;state.exFormatData=[];
   state.mathItems=[];state.mathAnswers={};state.mathResults=null;
   state.specialEx=null;state.loadingSpecial=false;
   state.exDifficulty=Math.min((state.exDifficulty||0)+1,5);
   state.exParsed=[];
   if(state.view==='task'&&state.task?.isExam){
-    genExamEx();
+    await genExamEx();
   } else {
-    if(state.view==='task')genTaskEx();else genEx();
+    if(state.view==='task') await genTaskEx(); else await genEx();
+  }
+  // Asegurar que los ejercicios especiales también se regeneren
+  if(isExtendedSubj()&&(state.exFormat||'completar')==='completar'&&!state.loadingSpecial&&!state.specialEx){
+    genSpecialEx();
   }
 }
 
@@ -1992,41 +1996,55 @@ async function genSpecialEx(){
   const tp=state.topic,s=state.subj;
   const grade=state.activeStudent?.grade||'3';
   const diff=state.exDifficulty||0;
-  const diffDesc=[`apropiados para ${grade}° grado con oraciones completas de al menos 8 palabras por ítem`,`con mayor análisis, oraciones más complejas de 10+ palabras`,`que requieran relacionar y aplicar conceptos, oraciones elaboradas`,`que requieran comparar, distinguir y justificar, alta complejidad`,`de máxima complejidad con casos particulares y excepciones`][Math.min(diff,4)];
+  const diffDesc=[`apropiados para ${grade}° grado`,`con un paso más de análisis y vocabulario más específico`,`que requieran relacionar y aplicar conceptos del tema`,`que requieran comparar, distinguir y justificar`,`de máxima complejidad con casos particulares y excepciones`][Math.min(diff,4)];
   const matCtx=tp.photoContent?`\nMATERIAL:\n${tp.photoContent.substring(0,700)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
-  const nombre=state.activeStudent?.name||'el alumno';
   const r=await ai([{role:'user',content:`Generá ejercicios interactivos de ${s.n} para ${grade}° grado.
 TEMA OBLIGATORIO: "${tp.title}" — TODOS los ejercicios deben ser exclusivamente sobre este tema.${matCtx}
-PROHIBIDO: no uses contenido genérico, no inventes temas distintos, no uses el título del tema como respuesta.
+PROHIBIDO: no uses contenido genérico, no inventes temas distintos.
 DIFICULTAD: ${diffDesc}.
-REGLA CLAVE para ORDENAR: los ítems DEBEN ser oraciones completas de al menos 8 palabras. NUNCA palabras sueltas ni frases cortas de menos de 8 palabras. Ejemplo correcto: "Los sustantivos propios se escriben siempre con letra mayúscula". Ejemplo INCORRECTO: "perro" o "Buenos Aires".
 
-Formato JSON estricto — SOLO esto, sin texto extra. Cada ejercicio tiene EXACTAMENTE 3 ítems/pares:
+ORDENAR = unscramble de palabras. Dás una oración correcta de 7-10 palabras sobre el tema. El sistema mezcla las palabras. El alumno las ordena.
+CLASIFICAR = clasificar ítems en 3 categorías distintas del tema (nunca solo 2). Mezclá los tipos: ejemplo si el tema es sustantivos, usá "Sustantivo común", "Sustantivo propio" Y "Verbo de acción" en el mismo ejercicio. Los ítems deben ser variados.
+UNIR = relacionar concepto con su definición o ejemplo.
+
+Formato JSON — SOLO esto, sin texto extra:
 {
   "ordenar":[
-    {"consigna":"[consigna sobre ${tp.title}]","items":["[oración de 8+ palabras sobre el tema]","[oración de 8+ palabras]","[oración de 8+ palabras]"],"correcto":[2,1,3]},
-    {"consigna":"[otra consigna sobre ${tp.title}]","items":["[oración 8+ palabras]","[oración 8+ palabras]","[oración 8+ palabras]"],"correcto":[3,1,2]}
+    {"consigna":"Ordená las palabras para formar una oración sobre ${tp.title}.","oracion":"[oración correcta de 7-10 palabras sobre el tema]"},
+    {"consigna":"Armá la oración mezclada poniendo el número de posición a cada palabra.","oracion":"[otra oración correcta de 7-10 palabras sobre el tema]"}
   ],
   "clasificar":[
-    {"consigna":"[consigna sobre ${tp.title}]","grupos":["[grupo A]","[grupo B]"],"items":["[item]","[item]","[item]","[item]","[item]","[item]"],"correcta":["[grupo A]","[grupo B]","[grupo A]","[grupo B]","[grupo A]","[grupo B]"]},
-    {"consigna":"[otra consigna]","grupos":["[grupo]","[grupo]"],"items":["[item]","[item]","[item]","[item]","[item]","[item]"],"correcta":["[grupo]","[grupo]","[grupo]","[grupo]","[grupo]","[grupo]"]}
+    {"consigna":"Clasificá cada palabra o frase según corresponda.","grupos":["[categoría 1 del tema]","[categoría 2 del tema]","[categoría 3 del tema]"],"items":["[item]","[item]","[item]","[item]","[item]","[item]"],"correcta":["[cat1]","[cat2]","[cat3]","[cat1]","[cat2]","[cat3]"]},
+    {"consigna":"Clasificá estos elementos según el tipo que sean.","grupos":["[categoría A]","[categoría B]","[categoría C]"],"items":["[item]","[item]","[item]","[item]","[item]","[item]"],"correcta":["[catA]","[catB]","[catC]","[catA]","[catB]","[catC]"]}
   ],
   "unir":[
     {"consigna":"[consigna sobre ${tp.title}]","colA":["[elem 1]","[elem 2]","[elem 3]"],"colB":["[par de elem 3]","[par de elem 1]","[par de elem 2]"],"pares":[1,2,0]},
     {"consigna":"[otra consigna]","colA":["[elem]","[elem]","[elem]"],"colB":["[par]","[par]","[par]"],"pares":[2,0,1]}
   ]
 }
-REGLAS TÉCNICAS: correcto[i]=número de posición (1=primero). correcta[i]=nombre exacto del grupo. pares[i]=índice 0-based en colB que corresponde a colA[i]. SIEMPRE 3 ítems en ordenar y unir, 6 ítems en clasificar.`}],
-  `Sos una maestra experta en ${s.n} para ${grade}° grado primaria Argentina. Tu única tarea es generar ejercicios sobre "${tp.title}". Si el contenido no es directamente sobre ese tema, está MAL. Devolvés SOLO JSON válido, sin markdown, sin texto extra.`,1200);
+REGLAS: correcta[i]=nombre exacto del grupo. pares[i]=índice 0-based en colB que corresponde a colA[i]. SIEMPRE 6 ítems en clasificar, 3 pares en unir.`}],
+  `Sos una maestra experta en ${s.n} para ${grade}° grado primaria Argentina. Tu única tarea es generar ejercicios sobre "${tp.title}". Devolvés SOLO JSON válido, sin markdown, sin texto extra.`,1400);
   try{
     const clean=r.replace(/```json|```/g,'').trim();
     const data=JSON.parse(clean);
+    // Procesar ordenar: mezclar palabras de cada oración client-side
+    data.ordenar=(data.ordenar||[]).map(ex=>{
+      const words=(ex.oracion||'').split(' ').filter(w=>w.length>0);
+      // Fisher-Yates shuffle
+      const idx=words.map((_,i)=>i);
+      for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
+      const shuffled=idx.map(i=>words[i]);
+      // correcto[shuffledPos] = 1-based position in original sentence
+      const correcto=new Array(words.length);
+      idx.forEach((origIdx,shuffledPos)=>{correcto[shuffledPos]=origIdx+1;});
+      return{...ex,items:shuffled,correcto};
+    });
     state.specialEx={
       data,
       answers:{ordenar:[{},{}],clasificar:[{},{}],unir:[{},{}]},
       results:null
     };
-  }catch{state.specialEx=null;}
+  }catch(e){console.error('genSpecialEx parse error:',e);state.specialEx=null;}
   state.loadingSpecial=false;render();
 }
 
@@ -2090,16 +2108,18 @@ function renderSpecialEx(){
   // ── ORDENAR ──
   (d.ordenar||[]).forEach((ex,ei)=>{
     html+=`<div style="background:rgba(45,27,105,.45);border:1.5px solid rgba(139,92,246,.3);border-radius:14px;padding:14px;margin-bottom:10px">
-<div style="font-weight:800;font-size:11px;color:#A78BFA;margin-bottom:8px;letter-spacing:.5px">🔢 ORDENAR ${ei+1}</div>
-<div style="font-size:13px;color:#E9D5FF;margin-bottom:10px;line-height:1.6">${ex.consigna}</div>
-${ex.items.map((it,ii)=>{
+<div style="font-weight:800;font-size:11px;color:#A78BFA;margin-bottom:8px;letter-spacing:.5px">🔢 ORDENAR PALABRAS ${ei+1}</div>
+<div style="font-size:13px;color:#E9D5FF;margin-bottom:4px;line-height:1.6">${ex.consigna}</div>
+<div style="font-size:11px;color:#C4B5FD;margin-bottom:10px">Escribí el número de posición (1, 2, 3...) que le corresponde a cada palabra en la oración.</div>
+${(ex.items||[]).map((word,ii)=>{
   const userVal=a.ordenar[ei]?.[ii]||'';
   const correct=res?.detail?.ordenar[ei]?.[ii];
   const border=done?(correct?'rgba(16,185,129,.6)':'rgba(239,68,68,.5)'):'rgba(139,92,246,.3)';
   return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
 <input class="inp" value="${userVal}" oninput="setSpecialAns('ordenar',${ei},${ii},this.value)" placeholder="#" style="margin:0;width:52px;text-align:center;font-weight:800;border-color:${border}" ${done?'disabled':''}>${done&&!correct?`<span style="font-size:11px;color:#FCA5A5">→ ${ex.correcto[ii]}</span>`:''}
-<span style="font-size:13px;color:#E9D5FF">${it}</span>
+<span style="font-size:14px;color:#E9D5FF;background:rgba(109,40,217,.25);border-radius:8px;padding:4px 10px">${word}</span>
 </div>`;}).join('')}
+${done&&ex.oracion?`<div style="font-size:12px;color:#6EE7B7;margin-top:6px">✅ Oración correcta: <em>${ex.oracion}</em></div>`:''}
 </div>`;
   });
 
