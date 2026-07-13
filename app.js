@@ -1992,19 +1992,20 @@ async function genSpecialEx(){
   const tp=state.topic,s=state.subj;
   const grade=state.activeStudent?.grade||'3';
   const diff=state.exDifficulty||0;
-  const diffDesc=['directos y simples, apropiados para el inicio del tema','con un paso más de análisis','que requieran relacionar conceptos','que requieran comparar o distinguir casos similares','de máxima complejidad, con casos particulares o excepciones'][Math.min(diff,4)];
+  const diffDesc=[`apropiados para ${grade}° grado con oraciones completas de al menos 8 palabras por ítem`,`con mayor análisis, oraciones más complejas de 10+ palabras`,`que requieran relacionar y aplicar conceptos, oraciones elaboradas`,`que requieran comparar, distinguir y justificar, alta complejidad`,`de máxima complejidad con casos particulares y excepciones`][Math.min(diff,4)];
   const matCtx=tp.photoContent?`\nMATERIAL:\n${tp.photoContent.substring(0,700)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
   const nombre=state.activeStudent?.name||'el alumno';
   const r=await ai([{role:'user',content:`Generá ejercicios interactivos de ${s.n} para ${grade}° grado.
 TEMA OBLIGATORIO: "${tp.title}" — TODOS los ejercicios deben ser exclusivamente sobre este tema.${matCtx}
 PROHIBIDO: no uses contenido genérico, no inventes temas distintos, no uses el título del tema como respuesta.
 DIFICULTAD: ${diffDesc}.
+REGLA CLAVE para ORDENAR: los ítems DEBEN ser oraciones completas de al menos 8 palabras. NUNCA palabras sueltas ni frases cortas de menos de 8 palabras. Ejemplo correcto: "Los sustantivos propios se escriben siempre con letra mayúscula". Ejemplo INCORRECTO: "perro" o "Buenos Aires".
 
 Formato JSON estricto — SOLO esto, sin texto extra. Cada ejercicio tiene EXACTAMENTE 3 ítems/pares:
 {
   "ordenar":[
-    {"consigna":"[consigna sobre ${tp.title}]","items":["[item del tema]","[item del tema]","[item del tema]"],"correcto":[2,1,3]},
-    {"consigna":"[otra consigna sobre ${tp.title}]","items":["[item]","[item]","[item]"],"correcto":[3,1,2]}
+    {"consigna":"[consigna sobre ${tp.title}]","items":["[oración de 8+ palabras sobre el tema]","[oración de 8+ palabras]","[oración de 8+ palabras]"],"correcto":[2,1,3]},
+    {"consigna":"[otra consigna sobre ${tp.title}]","items":["[oración 8+ palabras]","[oración 8+ palabras]","[oración 8+ palabras]"],"correcto":[3,1,2]}
   ],
   "clasificar":[
     {"consigna":"[consigna sobre ${tp.title}]","grupos":["[grupo A]","[grupo B]"],"items":["[item]","[item]","[item]","[item]","[item]","[item]"],"correcta":["[grupo A]","[grupo B]","[grupo A]","[grupo B]","[grupo A]","[grupo B]"]},
