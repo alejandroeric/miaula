@@ -492,12 +492,11 @@ ${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;f
   ${!state.mathResults&&state.mathItems.length>0?`<button class="btn b-grn" onclick="verifyMath()">✅ Ver resultados</button>`:''}
 </div>`}`:`${state.exParsed.length===0&&!state.loadingEx?spin('Preparando ejercicios...'):''}
 ${exItems}
-${!state.exResults&&state.exParsed.length>0&&!state.loadingEx?`<button id="verifyBtn" class="btn b-grn" style="width:100%;margin-top:6px" ${state.verifying?'disabled':''} onclick="verifyAnswers()">${state.verifying?'🔄 Corrigiendo...':'✅ Ver resultados completar'}</button>`:''}
 ${state.feedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:10px;font-size:14px;font-weight:700;text-align:center">${state.feedback}</div>`:''}
 ${isExtendedSubj()&&(state.exFormat||'completar')==='completar'?state.loadingSpecial?spin('Preparando ordenar, clasificar y unir...'):state.specialEx?`<div style="margin-top:4px">${renderSpecialEx()}</div>`:'':''}
-${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">
+${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px">
+  ${!state.exResults&&state.exParsed.length>0&&!state.verifying&&!(state.specialEx?.results)?`<button id="verifyBtn" class="btn b-grn" style="flex:1" ${state.verifying?'disabled':''} onclick="verifyAll()">${state.verifying?'🔄 Corrigiendo...':'✅ Ver resultados'}</button>`:''}
   <button class="btn b-vio" style="background:linear-gradient(135deg,${s.cl},${s.bd});box-shadow:0 5px 0 ${s.sh}" onclick="moreEx()">🔄 Más ejercicios</button>
-  ${state.exResults?`<button class="btn b-grn" onclick="moreEx()">➕ Nuevos ejercicios</button>`:''}
 </div>`}`:`${fmtBody}`}
 </div>`:'';
     content=explBlock+exBlock;
@@ -2041,7 +2040,7 @@ REGLAS: correcta[i]=nombre exacto del grupo. pares[i]=índice 0-based en colB qu
     });
     state.specialEx={
       data,
-      answers:{ordenar:[{},{}],clasificar:[{},{}],unir:[{},{}]},
+      answers:{ordenar:['',''],clasificar:[{},{}],unir:[{},{}]},
       results:null
     };
   }catch(e){console.error('genSpecialEx parse error:',e);state.specialEx=null;}
@@ -2052,6 +2051,14 @@ function setSpecialAns(tipo,ei,ii,v){
   if(!state.specialEx)return;
   state.specialEx.answers[tipo][ei][ii]=v;
 }
+function setOrdenarAns(ei,v){
+  if(!state.specialEx)return;
+  state.specialEx.answers.ordenar[ei]=v;
+}
+async function verifyAll(){
+  if(state.exParsed.length>0&&!state.exResults) await verifyAnswers();
+  if(state.specialEx?.data&&!state.specialEx.results) verifySpecialEx();
+}
 
 function verifySpecialEx(){
   if(!state.specialEx)return;
@@ -2059,15 +2066,14 @@ function verifySpecialEx(){
   const a=state.specialEx.answers;
   let ok=0,total=0;
   const res={ordenar:[],clasificar:[],unir:[]};
-  // Ordenar
+  // Ordenar — comparar oración escrita
   (d.ordenar||[]).forEach((ex,ei)=>{
-    const exRes=ex.items.map((it,ii)=>{
-      const userNum=parseInt(a.ordenar[ei]?.[ii]||'0');
-      const correct=userNum===ex.correcto[ii];
-      if(correct)ok++;total++;
-      return correct;
-    });
-    res.ordenar.push(exRes);
+    const norm=s=>s.trim().toLowerCase().replace(/[.,!?;:¿¡]/g,'').replace(/\s+/g,' ');
+    const userSent=norm(typeof a.ordenar[ei]==='string'?a.ordenar[ei]:'');
+    const correctSent=norm(ex.oracion||'');
+    const correct=userSent.length>0&&userSent===correctSent;
+    if(correct)ok++;total++;
+    res.ordenar.push(correct);
   });
   // Clasificar
   (d.clasificar||[]).forEach((ex,ei)=>{
@@ -2107,19 +2113,16 @@ function renderSpecialEx(){
 
   // ── ORDENAR ──
   (d.ordenar||[]).forEach((ex,ei)=>{
+    const userTyped=typeof a.ordenar[ei]==='string'?a.ordenar[ei]:'';
+    const ordenarResult=res?.detail?.ordenar[ei];
+    const inputBorder=done?(ordenarResult?'rgba(16,185,129,.6)':'rgba(239,68,68,.5)'):'rgba(139,92,246,.3)';
     html+=`<div style="background:rgba(45,27,105,.45);border:1.5px solid rgba(139,92,246,.3);border-radius:14px;padding:14px;margin-bottom:10px">
 <div style="font-weight:800;font-size:11px;color:#A78BFA;margin-bottom:8px;letter-spacing:.5px">🔢 ORDENAR PALABRAS ${ei+1}</div>
-<div style="font-size:13px;color:#E9D5FF;margin-bottom:4px;line-height:1.6">${ex.consigna}</div>
-<div style="font-size:11px;color:#C4B5FD;margin-bottom:10px">Escribí el número de posición (1, 2, 3...) que le corresponde a cada palabra en la oración.</div>
-${(ex.items||[]).map((word,ii)=>{
-  const userVal=a.ordenar[ei]?.[ii]||'';
-  const correct=res?.detail?.ordenar[ei]?.[ii];
-  const border=done?(correct?'rgba(16,185,129,.6)':'rgba(239,68,68,.5)'):'rgba(139,92,246,.3)';
-  return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-<input class="inp" value="${userVal}" oninput="setSpecialAns('ordenar',${ei},${ii},this.value)" placeholder="#" style="margin:0;width:52px;text-align:center;font-weight:800;border-color:${border}" ${done?'disabled':''}>${done&&!correct?`<span style="font-size:11px;color:#FCA5A5">→ ${ex.correcto[ii]}</span>`:''}
-<span style="font-size:14px;color:#E9D5FF;background:rgba(109,40,217,.25);border-radius:8px;padding:4px 10px">${word}</span>
-</div>`;}).join('')}
-${done&&ex.oracion?`<div style="font-size:12px;color:#6EE7B7;margin-top:6px">✅ Oración correcta: <em>${ex.oracion}</em></div>`:''}
+<div style="font-size:13px;color:#E9D5FF;margin-bottom:8px;line-height:1.6">${ex.consigna}</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${(ex.items||[]).map(w=>`<span style="background:rgba(109,40,217,.35);border:1.5px solid rgba(139,92,246,.5);border-radius:8px;padding:5px 11px;font-size:14px;color:#E9D5FF;font-weight:600">${w}</span>`).join('')}</div>
+<div style="font-size:11px;color:#C4B5FD;margin-bottom:6px">Escribí la oración armada con las palabras de arriba:</div>
+<textarea class="inp" oninput="setOrdenarAns(${ei},this.value)" style="margin:0;width:100%;min-height:60px;font-size:14px;resize:vertical;border-color:${inputBorder}" ${done?'disabled':''}>${userTyped.replace(/</g,'&lt;')}</textarea>
+${done?`<div style="font-size:12px;margin-top:8px;color:${ordenarResult?'#6EE7B7':'#FCA5A5'}">${ordenarResult?'✅ ¡Correcto!':'❌ Respuesta correcta: <em>'+ex.oracion+'</em>'}</div>`:''}
 </div>`;
   });
 
@@ -2166,9 +2169,6 @@ ${done&&!correct?`<span style="font-size:11px;color:#FCA5A5">${'ABCDEFGH'[ex.par
 </div>`;
   });
 
-  if(!done&&state.specialEx.data){
-    html+=`<button class="btn b-grn" style="width:100%;margin-top:4px" onclick="verifySpecialEx()">✅ Ver resultados</button>`;
-  }
   if(done){
     html+=`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:8px;text-align:center"><div style="font-family:'Fredoka One';font-size:24px;color:#E9D5FF">🏆 ${res.ok} / ${res.total}</div><div style="font-size:13px;color:#C4B5FD;margin-top:4px">${res.ok===res.total?'¡Perfecta! 🌟':res.ok>=Math.ceil(res.total*.6)?'¡Muy bien! 💪':'¡Buen intento! 😊'}</div></div>`;
   }
