@@ -25,6 +25,7 @@ let state={
   calendar:[],parentPin:PIN0,parentAuthed:false,
   chatMsgs:[],exParsed:[],answers:{},exResults:null,exBatch:0,explanation:'',examPoints:null,currentExamEj:null,usedExercises:[],revealedAnswers:{},exFormat:'completar',mcAnswers:{},vofAnswers:{},exFormatData:[],mcChecked:false,vofChecked:false,exDifficulty:0,
   mathItems:[],mathAnswers:{},mathResults:null,
+  specialEx:null,loadingSpecial:false,
   streak:0,lastStudyDate:'',achievements:[],topicProgress:{},
   quickReview:false,quickItems:[],quickIdx:0,quickAnswers:{},quickResults:null,loadingQuick:false,
   dictItems:[],dictAnswers:{},fonItems:[],fonAnswers:{},engTab:'ej',
@@ -496,6 +497,7 @@ ${state.loadingEx?spin('Más ejercicios...'):`<div style="display:flex;gap:7px;f
   ${!state.exResults&&state.exParsed.length>0?`<button id="verifyBtn" class="btn b-grn" ${state.verifying?'disabled':''} onclick="verifyAnswers()">${state.verifying?'🔄 Corrigiendo...':'✅ Ver resultados'}</button>`:''}
   ${state.exResults?`<button class="btn b-grn" onclick="moreEx()">➕ Nuevos ejercicios</button>`:''}
 </div>`}
+${isExtendedSubj()&&(state.exFormat||'completar')==='completar'?state.loadingSpecial?spin('Preparando ordenar, clasificar y unir...'):state.specialEx?`<div style="margin-top:4px">${renderSpecialEx()}</div>`:'':''}
 ${state.feedback?`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:10px;font-size:14px;font-weight:700;text-align:center">${state.feedback}</div>`:''}`:`${fmtBody}`}
 </div>`:'';
     content=explBlock+exBlock;
@@ -1273,7 +1275,7 @@ function goTask(i){
 
 function goTopic(i){
   state.topic=state.topics[state.subj.id][i];state.view='topic';
-  state.explanation='';state.exParsed=[];state.answers={};state.exBatch=0;state.feedback='';state.exResults=null;state.mathItems=[];state.mathAnswers={};state.mathResults=null;
+  state.explanation='';state.exParsed=[];state.answers={};state.exBatch=0;state.feedback='';state.exResults=null;state.mathItems=[];state.mathAnswers={};state.mathResults=null;state.specialEx=null;state.loadingSpecial=false;
   state.usedExercises=[];state.revealedAnswers={};state.exFormat='completar';state.mcAnswers={};state.vofAnswers={};state.exFormatData=[];state.mcChecked=false;state.vofChecked=false;state.exDifficulty=0;
   state.engTab='ej';state.dictItems=[];state.dictAnswers={};state.dictFeedback='';state.fonItems=[];state.fonAnswers={};state.fonFeedback='';
   state.loadingExpl=true;state.loadingEx=false;state.chatMsgs=[];render();loadExpl();}
@@ -1822,7 +1824,8 @@ Exercise X:
 [Answer: answer1 / answer2 / answer3 / answer4]`;
   } else {
     const topicMatEs=state.topic.photoContent?`\n\nMATERIAL DE ESTUDIO (basá los ejercicios en esto):\n${state.topic.photoContent.substring(0,900)}`:state.topic.desc?`\n\nContexto: ${state.topic.desc}`:'';
-    prompt=`Creá 3 ejercicios sobre "${state.topic.title}" de ${state.subj.n}. Tipo: ${tipos[lote]}${topicMatEs}${usedHint}`;
+    const nEx=isExtendedSubj()?2:3;
+    prompt=`Creá ${nEx} ejercicios sobre "${state.topic.title}" de ${state.subj.n}. Tipo: ${tipos[lote]}${topicMatEs}${usedHint}`;
     sys=`Maestra ${gradeStr()}. ${diffHintEs} REGLAS ABSOLUTAS que no podés violar:
 1. Usá ÚNICAMENTE [__] para marcar cada campo editable. NUNCA ___ ni ... ni __ ni ningún otro formato.
 2. Cada ejercicio DEBE tener MÍNIMO 4 campos [__]. Contá los [__] antes de terminar.
@@ -1842,7 +1845,9 @@ Ejercicio X:
   const parsed=(pts.length>=1?pts:[r]).map(parseEx);
   parsed.forEach(p=>{if(p.q&&p.q.length>10)state.usedExercises.push(p.q.substring(0,60));});
   state.exParsed=[...state.exParsed,...parsed];
-  state.exBatch+=3;state.loadingEx=false;render();}
+  state.exBatch+=3;state.loadingEx=false;render();
+  if(isExtendedSubj()&&(state.exFormat||'completar')==='completar')genSpecialEx();
+}
 
 // ── MATEMÁTICA: render pizarrón ────────────────────────
 function renderMathItem(it,i){
@@ -1921,6 +1926,7 @@ Tipos válidos: suma, resta, multiplicacion, division, problema.`}],
 function moreEx(){
   state.exResults=null;state.answers={};state.feedback='';state.revealedAnswers={};state.mcAnswers={};state.vofAnswers={};state.mcChecked=false;state.vofChecked=false;state.exFormatData=[];
   state.mathItems=[];state.mathAnswers={};state.mathResults=null;
+  state.specialEx=null;state.loadingSpecial=false;
   state.exDifficulty=Math.min((state.exDifficulty||0)+1,5);
   state.exParsed=[];
   if(state.view==='task'&&state.task?.isExam){
@@ -1977,6 +1983,174 @@ o
     await saveStudentData();showCat(name,ok);
   }
   render();}
+
+// ── EJERCICIOS ESPECIALES (Ordenar / Clasificar / Unir) ──────────────
+function isExtendedSubj(){return state.subj&&state.subj.id!=='matematica'&&state.subj.id!=='ingles'&&!state.subj.isIdioma;}
+
+async function genSpecialEx(){
+  state.loadingSpecial=true;state.specialEx=null;render();
+  const tp=state.topic,s=state.subj;
+  const grade=state.activeStudent?.grade||'3';
+  const diff=state.exDifficulty||0;
+  const diffDesc=['directos y simples, apropiados para el inicio del tema','con un paso más de análisis','que requieran relacionar conceptos','que requieran comparar o distinguir casos similares','de máxima complejidad, con casos particulares o excepciones'][Math.min(diff,4)];
+  const matCtx=tp.photoContent?`\nMATERIAL:\n${tp.photoContent.substring(0,700)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
+  const nombre=state.activeStudent?.name||'el alumno';
+  const r=await ai([{role:'user',content:`Generá ejercicios interactivos para ${grade}° grado sobre "${tp.title}" (${s.n}).${matCtx}
+
+Los ejercicios deben ser ${diffDesc}.
+Devolvé SOLO este JSON (sin texto extra, sin markdown):
+{
+  "ordenar":[
+    {"consigna":"Numerá en el orden correcto (1=primero):","items":["item B","item A","item D","item C"],"correcto":[2,1,4,3]},
+    {"consigna":"Otra consigna de ordenar:","items":["...","...","..."],"correcto":[...]}
+  ],
+  "clasificar":[
+    {"consigna":"Clasificá cada elemento en su grupo:","grupos":["Grupo 1","Grupo 2"],"items":["x","y","z","w"],"correcta":["Grupo 1","Grupo 2","Grupo 1","Grupo 2"]},
+    {"consigna":"Otra clasificación:","grupos":[...],"items":[...],"correcta":[...]}
+  ],
+  "unir":[
+    {"consigna":"Uní cada elemento con su par (escribí la letra):","colA":["Elemento 1","Elemento 2","Elemento 3"],"colB":["Par C","Par A","Par B"],"pares":[2,0,1]},
+    {"consigna":"Otro ejercicio de unir:","colA":[...],"colB":[...],"pares":[...]}
+  ]
+}
+REGLAS: correcto[i]=número de posición correcta (1=primero). correcta[i]=nombre del grupo correcto. pares[i]=índice en colB que corresponde a colA[i]. Usá contenido real del tema, no ejemplos genéricos.`}],
+  `Maestra experta en ${s.n} para ${grade}° grado primaria Argentina. SOLO JSON válido.`,1200);
+  try{
+    const clean=r.replace(/```json|```/g,'').trim();
+    const data=JSON.parse(clean);
+    state.specialEx={
+      data,
+      answers:{ordenar:[{},{}],clasificar:[{},{}],unir:[{},{}]},
+      results:null
+    };
+  }catch{state.specialEx=null;}
+  state.loadingSpecial=false;render();
+}
+
+function setSpecialAns(tipo,ei,ii,v){
+  if(!state.specialEx)return;
+  state.specialEx.answers[tipo][ei][ii]=v;
+}
+
+function verifySpecialEx(){
+  if(!state.specialEx)return;
+  const d=state.specialEx.data;
+  const a=state.specialEx.answers;
+  let ok=0,total=0;
+  const res={ordenar:[],clasificar:[],unir:[]};
+  // Ordenar
+  (d.ordenar||[]).forEach((ex,ei)=>{
+    const exRes=ex.items.map((it,ii)=>{
+      const userNum=parseInt(a.ordenar[ei]?.[ii]||'0');
+      const correct=userNum===ex.correcto[ii];
+      if(correct)ok++;total++;
+      return correct;
+    });
+    res.ordenar.push(exRes);
+  });
+  // Clasificar
+  (d.clasificar||[]).forEach((ex,ei)=>{
+    const exRes=ex.items.map((it,ii)=>{
+      const userVal=(a.clasificar[ei]?.[ii]||'').trim().toLowerCase();
+      const correctVal=(ex.correcta[ii]||'').trim().toLowerCase();
+      const correct=userVal===correctVal;
+      if(correct)ok++;total++;
+      return correct;
+    });
+    res.clasificar.push(exRes);
+  });
+  // Unir
+  (d.unir||[]).forEach((ex,ei)=>{
+    const exRes=ex.colA.map((it,ii)=>{
+      const userLetter=(a.unir[ei]?.[ii]||'').trim().toUpperCase();
+      const correctLetter='ABCDEFGH'[ex.pares[ii]];
+      const correct=userLetter===correctLetter;
+      if(correct)ok++;total++;
+      return correct;
+    });
+    res.unir.push(exRes);
+  });
+  state.specialEx.results={ok,total,detail:res};
+  if(ok===total)state.stars+=3;else if(ok>=Math.ceil(total*.6))state.stars+=1;
+  saveStudentData();showCat(state.activeStudent?.name,ok);
+  render();
+}
+
+function renderSpecialEx(){
+  if(!state.specialEx?.data)return'';
+  const d=state.specialEx.data;
+  const a=state.specialEx.answers;
+  const res=state.specialEx.results;
+  const done=!!res;
+  let html='';
+
+  // ── ORDENAR ──
+  (d.ordenar||[]).forEach((ex,ei)=>{
+    html+=`<div style="background:rgba(45,27,105,.45);border:1.5px solid rgba(139,92,246,.3);border-radius:14px;padding:14px;margin-bottom:10px">
+<div style="font-weight:800;font-size:11px;color:#A78BFA;margin-bottom:8px;letter-spacing:.5px">🔢 ORDENAR ${ei+1}</div>
+<div style="font-size:13px;color:#E9D5FF;margin-bottom:10px;line-height:1.6">${ex.consigna}</div>
+${ex.items.map((it,ii)=>{
+  const userVal=a.ordenar[ei]?.[ii]||'';
+  const correct=res?.detail?.ordenar[ei]?.[ii];
+  const border=done?(correct?'rgba(16,185,129,.6)':'rgba(239,68,68,.5)'):'rgba(139,92,246,.3)';
+  return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+<input class="inp" value="${userVal}" oninput="setSpecialAns('ordenar',${ei},${ii},this.value)" placeholder="#" style="margin:0;width:52px;text-align:center;font-weight:800;border-color:${border}" ${done?'disabled':''}>${done&&!correct?`<span style="font-size:11px;color:#FCA5A5">→ ${ex.correcto[ii]}</span>`:''}
+<span style="font-size:13px;color:#E9D5FF">${it}</span>
+</div>`;}).join('')}
+</div>`;
+  });
+
+  // ── CLASIFICAR ──
+  (d.clasificar||[]).forEach((ex,ei)=>{
+    html+=`<div style="background:rgba(45,27,105,.45);border:1.5px solid rgba(139,92,246,.3);border-radius:14px;padding:14px;margin-bottom:10px">
+<div style="font-weight:800;font-size:11px;color:#A78BFA;margin-bottom:8px;letter-spacing:.5px">🗂 CLASIFICAR ${ei+1}</div>
+<div style="font-size:13px;color:#E9D5FF;margin-bottom:8px;line-height:1.6">${ex.consigna}</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(ex.grupos||[]).map(g=>`<span style="background:rgba(109,40,217,.3);border:1.5px solid rgba(139,92,246,.4);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:#C4B5FD">${g}</span>`).join('')}</div>
+${ex.items.map((it,ii)=>{
+  const userVal=a.clasificar[ei]?.[ii]||'';
+  const correct=res?.detail?.clasificar[ei]?.[ii];
+  const border=done?(correct?'rgba(16,185,129,.6)':'rgba(239,68,68,.5)'):'rgba(139,92,246,.3)';
+  return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+<span style="font-size:13px;color:#E9D5FF;min-width:80px">${it}</span>
+<span style="color:#A78BFA">→</span>
+<input class="inp" value="${userVal}" oninput="setSpecialAns('clasificar',${ei},${ii},this.value)" placeholder="grupo..." style="margin:0;flex:1;font-size:12px;border-color:${border}" ${done?'disabled':''}>
+${done&&!correct?`<span style="font-size:11px;color:#FCA5A5">${ex.correcta[ii]}</span>`:''}
+</div>`;}).join('')}
+</div>`;
+  });
+
+  // ── UNIR COLUMNAS ──
+  (d.unir||[]).forEach((ex,ei)=>{
+    html+=`<div style="background:rgba(45,27,105,.45);border:1.5px solid rgba(139,92,246,.3);border-radius:14px;padding:14px;margin-bottom:10px">
+<div style="font-weight:800;font-size:11px;color:#A78BFA;margin-bottom:8px;letter-spacing:.5px">🔗 UNIR COLUMNAS ${ei+1}</div>
+<div style="font-size:13px;color:#E9D5FF;margin-bottom:10px;line-height:1.6">${ex.consigna}</div>
+<div style="display:flex;gap:12px">
+  <div style="flex:1">
+    ${ex.colB.map((b,bi)=>`<div style="font-size:12px;color:#C4B5FD;margin-bottom:8px;line-height:1.4"><strong style="color:#A78BFA">${'ABCDEFGH'[bi]}.</strong> ${b}</div>`).join('')}
+  </div>
+  <div style="flex:1">
+    ${ex.colA.map((a2,ii)=>{
+      const userVal=a.unir[ei]?.[ii]||'';
+      const correct=res?.detail?.unir[ei]?.[ii];
+      const border=done?(correct?'rgba(16,185,129,.6)':'rgba(239,68,68,.5)'):'rgba(139,92,246,.3)';
+      return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+<span style="font-size:13px;color:#E9D5FF;flex:1;line-height:1.4">${ii+1}. ${a2}</span>
+<input class="inp" value="${userVal}" oninput="setSpecialAns('unir',${ei},${ii},this.value)" placeholder="?" style="margin:0;width:46px;text-align:center;font-weight:800;text-transform:uppercase;border-color:${border}" maxlength="1" ${done?'disabled':''}>
+${done&&!correct?`<span style="font-size:11px;color:#FCA5A5">${'ABCDEFGH'[ex.pares[ii]]}</span>`:''}
+</div>`;}).join('')}
+  </div>
+</div>
+</div>`;
+  });
+
+  if(!done&&state.specialEx.data){
+    html+=`<button class="btn b-grn" style="width:100%;margin-top:4px" onclick="verifySpecialEx()">✅ Ver resultados</button>`;
+  }
+  if(done){
+    html+=`<div style="background:rgba(16,185,129,.12);border:2px solid #86EFAC;border-radius:12px;padding:12px;margin-top:8px;text-align:center"><div style="font-family:'Fredoka One';font-size:24px;color:#E9D5FF">🏆 ${res.ok} / ${res.total}</div><div style="font-size:13px;color:#C4B5FD;margin-top:4px">${res.ok===res.total?'¡Perfecta! 🌟':res.ok>=Math.ceil(res.total*.6)?'¡Muy bien! 💪':'¡Buen intento! 😊'}</div></div>`;
+  }
+  return html;
+}
 
 async function genDictLen(){
   state.loadingDict=true;state.dictItems=[];state.dictAnswers={};state.dictFeedback='';render();
