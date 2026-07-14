@@ -1895,24 +1895,39 @@ async function genMathEx(){
   const diffDesc=['igual complejidad que el tema pero en su versión más directa y sencilla','un paso más de complejidad: agregá llevadas o un paso extra en los problemas','complejidad media-alta: números más grandes, problemas con dos operaciones','alta complejidad: problemas con varios pasos, números grandes, algún dato que no se usa','máxima complejidad posible dentro del tema: problemas elaborados, múltiples operaciones encadenadas'];
   const diffLabel=['Nivel 1','Nivel 2','Nivel 3','Nivel 4','Nivel 5'][Math.min(diff,4)];
   const diffInstr=diffDesc[Math.min(diff,4)];
-  const r=await ai([{role:'user',content:`Generá 5 ejercicios de matemática para un alumno de ${grade}° grado sobre el tema "${tp.title}".${matCtx}
+  const nivel=Number(grade)>=7?'secundaria':'primaria';
+  const r=await ai([{role:'user',content:`Generá 5 ejercicios de matemática para un alumno de ${grade}° grado de ${nivel} argentina sobre el tema "${tp.title}".${matCtx}
 
 REGLAS OBLIGATORIAS:
-1. Los ejercicios deben ser 100% apropiados para ${grade}° grado de primaria Argentina — ni más fáciles ni más difíciles de lo que se enseña en ese año.
+1. Los ejercicios deben ser 100% apropiados para ${grade}° grado ${nivel} Argentina. Usá los rangos numéricos, operaciones y conceptos exactos de ese año.
 2. El tema "${tp.title}" define QUÉ tipo de operaciones hacer. No te salgas del tema.
 3. ${diffLabel} de dificultad dentro del tema: ${diffInstr}.
 4. Para problemas usá situaciones cotidianas y el nombre: ${state.activeStudent?.name||'el alumno'}.
 
-Devolvé SOLO JSON array válido:
-[{"tipo":"suma","a":45,"b":38,"resultado":83},{"tipo":"problema","enunciado":"...","resultado":0}]
-Tipos válidos: suma, resta, multiplicacion, division, problema.`}],
-  `Sos una maestra experta en matemática de ${grade}° grado primaria Argentina. Conocés exactamente qué contenidos y rangos numéricos corresponden a cada grado. SOLO devolvés JSON array válido, sin texto, sin markdown.`,700);
+FORMATO JSON OBLIGATORIO — usá EXACTAMENTE estos campos, sin inventar otros nombres:
+- Operaciones: {"tipo":"suma","a":245,"b":138,"resultado":383}
+- Problemas: {"tipo":"problema","enunciado":"texto narrativo del problema, SIN fórmula al final","resultado":75}
+- Para fracciones: {"tipo":"suma","a":"3/4","b":"1/2","resultado":"5/4"}
+- Para ecuaciones: {"tipo":"problema","enunciado":"Resolvé: 2x + 5 = 13","resultado":"x=4"}
+
+REGLAS CRÍTICAS:
+1. Los campos se llaman SIEMPRE "a", "b" y "resultado". NUNCA uses sumando1, minuendo, numerador1 ni ningún otro nombre.
+2. En tipo "problema": el enunciado es solo el texto narrativo. NO agregues la fórmula ni la operación al final (sin "1230 × 15 = ?", sin "X + Y = ?"). El alumno deduce la operación.
+3. VERIFICÁ que "resultado" sea matemáticamente correcto antes de escribirlo. Si el problema dice "repartir en partes iguales" → división. Si dice "cuántos en total" → suma o multiplicación. El resultado debe ser la respuesta correcta.
+Devolvé SOLO el JSON array, sin texto, sin markdown.`}],
+  `Sos un/a docente experto/a en matemática de ${grade}° grado ${nivel} argentina. Conocés exactamente qué contenidos, rangos numéricos y operaciones corresponden a cada año. SOLO devolvés JSON array válido con campos "a", "b", "resultado". Sin texto extra, sin markdown.`,800);
   try{
     const clean=r.replace(/```json|```/g,'').trim();
     state.mathItems=JSON.parse(clean).slice(0,5).map(it=>{
-      // Normalizar nombres de campo que la IA puede variar
-      it.a=it.a??it.numero1??it.operando1??it.num1??it.dividendo??'?';
-      it.b=it.b??it.numero2??it.operando2??it.num2??it.divisor??'?';
+      // Normalizar: la IA a veces ignora la instrucción y usa otros nombres
+      if(it.a===undefined||it.a===null){
+        const knownFields=['tipo','resultado','result','respuesta','enunciado','enunciado_problema'];
+        const nums=Object.entries(it).filter(([k,v])=>!knownFields.includes(k)&&v!==undefined);
+        it.a=nums[0]?.[1]??'?';
+        it.b=nums[1]?.[1]??'?';
+      }
+      it.a=it.a??it.numero1??it.operando1??it.num1??it.dividendo??it.minuendo??it.sumando1??'?';
+      it.b=it.b??it.numero2??it.operando2??it.num2??it.divisor??it.sustraendo??it.sumando2??'?';
       it.resultado=it.resultado??it.result??it.respuesta??'?';
       if(it.tipo==='multiplicacion'&&Number(it.b)>Number(it.a)){const tmp=it.a;it.a=it.b;it.b=tmp;}
       return it;
