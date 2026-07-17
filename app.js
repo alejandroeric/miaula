@@ -1715,16 +1715,19 @@ async function genEx(){
   const diffHintEn=diffStepsEn[Math.min(diff,4)];
   if(fmt==='multiple'){
     const usedHint=(state.usedExercises||[]).length>0?`\n${isIngles?'Avoid repeating':'Evitá repetir'}: ${state.usedExercises.slice(-4).join(' | ')}`:'';
-    const p=isIngles?`Create 5 multiple-choice questions STRICTLY about "${state.topic.title}" IN ${langName.toUpperCase()}.${usedHint}`
-      :`Creá 5 preguntas de múltiple opción sobre "${state.topic.title}" de ${state.subj.n}.${usedHint}`;
-    const sys=isIngles?`${langName} teacher for ${gradeStr()}. 5 MC questions in ${langName} about "${state.topic.title}". ${diffHintEn} EXACT format (each option on its own line):
-Q1: [question]
+    const topicMatMC=state.topic.photoContent?`\n\n${isIngles?'TEACHING MATERIAL':'MATERIAL DEL TEMA'} (basá las preguntas en esto):\n${state.topic.photoContent.substring(0,800)}`:state.topic.desc?`\n\nContexto: ${state.topic.desc}`:'';
+    const p=isIngles?`Create 5 multiple-choice questions STRICTLY about "${state.topic.title}" IN ${langName.toUpperCase()}.${topicMatMC}${usedHint}`
+      :`Creá 5 preguntas de múltiple opción sobre "${state.topic.title}" de ${state.subj.n}.${topicMatMC}${usedHint}`;
+    const sys=isIngles?`${langName} teacher for ${gradeStr()}. ${diffHintEn}
+RULES: Each question MUST be a real question ending in "?". No creative titles, no chapter names — actual questions about the topic content. EXACT format (each option on its own line):
+Q1: [question ending in ?]
 A) option
 B) option
 C) option
 D) option
-[Answer: B]`:`Maestra ${gradeStr()}. 5 preguntas MC sobre "${state.topic.title}". ${diffHintEs} Formato EXACTO (cada opción en su propia línea):
-P1: [pregunta]
+[Answer: B]`:`Maestra ${gradeStr()}. ${diffHintEs}
+REGLAS: Cada pregunta DEBE ser una pregunta real que termine en "?". Sin títulos creativos, sin nombres de capítulos — preguntas concretas sobre el contenido del tema. Formato EXACTO (cada opción en su propia línea):
+P1: [pregunta que termina en ?]
 A) opción
 B) opción
 C) opción
@@ -1739,7 +1742,9 @@ D) opción
       const al=lines.find(l=>/\[(?:Respuesta|Answer):\s*[A-D]\]/i.test(l))||'';
       const am=al.match(/\[(?:Respuesta|Answer):\s*([A-D])\]/i);
       const correct=am?'ABCD'.indexOf(am[1].toUpperCase()):0;
-      return q&&opts.length>=2?{q,opts,correct}:null;
+      // Descartar bloques donde la "pregunta" es un título sin "?" ni contenido real
+      const isRealQ=q.includes('?')||q.length>30;
+      return q&&opts.length>=2&&isRealQ?{q,opts,correct}:null;
     }).filter(Boolean);
     items.forEach(it=>{if(it.q)state.usedExercises.push(it.q.substring(0,60));});
     state.exFormatData=items;state.mcAnswers={};state.mcChecked=false;
@@ -1929,6 +1934,9 @@ Devolvé SOLO el JSON array, sin texto, sin markdown.`}],
       it.a=it.a??it.numero1??it.operando1??it.num1??it.dividendo??it.minuendo??it.sumando1??'?';
       it.b=it.b??it.numero2??it.operando2??it.num2??it.divisor??it.sustraendo??it.sumando2??'?';
       it.resultado=it.resultado??it.result??it.respuesta??'?';
+      // Normalizar tipo: quitar tildes, variantes, espacios
+      const tipoNorm={'suma':'suma','adicion':'suma','addition':'suma','resta':'resta','substraccion':'resta','substraction':'resta','subtraction':'resta','multiplicacion':'multiplicacion','multiplicación':'multiplicacion','multiplication':'multiplicacion','division':'division','división':'division','division_exacta':'division','division_inexacta':'division','problema':'problema','problem':'problema'};
+      it.tipo=tipoNorm[it.tipo?.toLowerCase?.().replace(/[^a-záéíóú]/g,'')]||it.tipo||'problema';
       if(it.tipo==='multiplicacion'&&Number(it.b)>Number(it.a)){const tmp=it.a;it.a=it.b;it.b=tmp;}
       return it;
     });
