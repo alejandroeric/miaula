@@ -1909,16 +1909,18 @@ REGLAS OBLIGATORIAS:
 3. ${diffLabel} de dificultad dentro del tema: ${diffInstr}.
 4. Para problemas usá situaciones cotidianas y el nombre: ${state.activeStudent?.name||'el alumno'}.
 
-FORMATO JSON OBLIGATORIO — usá EXACTAMENTE estos campos, sin inventar otros nombres:
-- Operaciones: {"tipo":"suma","a":245,"b":138,"resultado":383}
-- Problemas: {"tipo":"problema","enunciado":"texto narrativo del problema, SIN fórmula al final","resultado":75}
-- Para fracciones: {"tipo":"suma","a":"3/4","b":"1/2","resultado":"5/4"}
-- Para ecuaciones: {"tipo":"problema","enunciado":"Resolvé: 2x + 5 = 13","resultado":"x=4"}
+FORMATO JSON — campo "tipo" tiene SOLO 5 valores posibles: "suma", "resta", "multiplicacion", "division", "problema". NUNCA uses "operacion", "mcd", "mcm", "potencia" ni ningún otro valor.
+- Operación directa: {"tipo":"suma","a":245,"b":138,"resultado":383}
+- Operación directa: {"tipo":"division","a":48,"b":6,"resultado":8}
+- Problema de texto: {"tipo":"problema","enunciado":"texto del problema","resultado":8}
+- Fracción: {"tipo":"suma","a":"3/4","b":"1/2","resultado":"5/4"}
+- Ecuación: {"tipo":"problema","enunciado":"Resolvé: 2x + 5 = 13","resultado":"x=4"}
+- MCM, MCD, potencias u otros temas avanzados: siempre como {"tipo":"problema","enunciado":"texto explicando qué calcular","resultado":valor}
 
-REGLAS CRÍTICAS:
-1. Los campos se llaman SIEMPRE "a", "b" y "resultado". NUNCA uses sumando1, minuendo, numerador1 ni ningún otro nombre.
-2. En tipo "problema": el enunciado es solo el texto narrativo. NO agregues la fórmula ni la operación al final (sin "1230 × 15 = ?", sin "X + Y = ?"). El alumno deduce la operación.
-3. VERIFICÁ que "resultado" sea matemáticamente correcto antes de escribirlo. Si el problema dice "repartir en partes iguales" → división. Si dice "cuántos en total" → suma o multiplicación. El resultado debe ser la respuesta correcta.
+REGLAS:
+1. "tipo" solo puede ser: suma, resta, multiplicacion, division, problema. NUNCA "operacion" ni nada más.
+2. Para operaciones directas: campos "a", "b", "resultado". NUNCA sumando1, minuendo, numerador1 ni otros.
+3. En tipo "problema": enunciado narrativo, SIN fórmula al final. Resultado matemáticamente correcto.
 Devolvé SOLO el JSON array, sin texto, sin markdown.`}],
   `Sos un/a docente experto/a en matemática de ${grade}° grado ${nivel} argentina. Conocés exactamente qué contenidos, rangos numéricos y operaciones corresponden a cada año. SOLO devolvés JSON array válido con campos "a", "b", "resultado". Sin texto extra, sin markdown.`,800);
   try{
@@ -1938,9 +1940,10 @@ Devolvé SOLO el JSON array, sin texto, sin markdown.`}],
       const tipoNorm={'suma':'suma','adicion':'suma','addition':'suma','resta':'resta','substraccion':'resta','substraction':'resta','subtraction':'resta','sumar':'suma','restar':'resta','multiplicacion':'multiplicacion','multiplicación':'multiplicacion','multiplication':'multiplicacion','multiplicar':'multiplicacion','division':'division','división':'division','division_exacta':'division','division_inexacta':'division','dividir':'division','problema':'problema','problem':'problema'};
       const tipoKey=(it.tipo||'').toLowerCase().replace(/[^a-záéíóú]/g,'');
       it.tipo=tipoNorm[tipoKey]||'problema';
-      // Si quedó como problema pero no tiene enunciado, armarlo con a y b
-      if(it.tipo==='problema'&&!it.enunciado&&it.a!=='?'&&it.b!=='?'){
-        it.enunciado=`Calculá: ${it.a} ${tipoKey} ${it.b}`;
+      // Si quedó como problema sin enunciado, construir uno sin exponer el tipo crudo
+      if(it.tipo==='problema'&&!it.enunciado){
+        if(it.a!=='?'&&it.b!=='?') it.enunciado=`Calculá la operación con ${it.a} y ${it.b}.`;
+        else it.enunciado='Resolvé el ejercicio.';
       }
       if(it.tipo==='multiplicacion'&&Number(it.b)>Number(it.a)){const tmp=it.a;it.a=it.b;it.b=tmp;}
       return it;
