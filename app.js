@@ -1935,8 +1935,13 @@ Devolvé SOLO el JSON array, sin texto, sin markdown.`}],
       it.b=it.b??it.numero2??it.operando2??it.num2??it.divisor??it.sustraendo??it.sumando2??'?';
       it.resultado=it.resultado??it.result??it.respuesta??'?';
       // Normalizar tipo: quitar tildes, variantes, espacios
-      const tipoNorm={'suma':'suma','adicion':'suma','addition':'suma','resta':'resta','substraccion':'resta','substraction':'resta','subtraction':'resta','multiplicacion':'multiplicacion','multiplicación':'multiplicacion','multiplication':'multiplicacion','division':'division','división':'division','division_exacta':'division','division_inexacta':'division','problema':'problema','problem':'problema'};
-      it.tipo=tipoNorm[it.tipo?.toLowerCase?.().replace(/[^a-záéíóú]/g,'')]||it.tipo||'problema';
+      const tipoNorm={'suma':'suma','adicion':'suma','addition':'suma','resta':'resta','substraccion':'resta','substraction':'resta','subtraction':'resta','sumar':'suma','restar':'resta','multiplicacion':'multiplicacion','multiplicación':'multiplicacion','multiplication':'multiplicacion','multiplicar':'multiplicacion','division':'division','división':'division','division_exacta':'division','division_inexacta':'division','dividir':'division','problema':'problema','problem':'problema'};
+      const tipoKey=(it.tipo||'').toLowerCase().replace(/[^a-záéíóú]/g,'');
+      it.tipo=tipoNorm[tipoKey]||'problema';
+      // Si quedó como problema pero no tiene enunciado, armarlo con a y b
+      if(it.tipo==='problema'&&!it.enunciado&&it.a!=='?'&&it.b!=='?'){
+        it.enunciado=`Calculá: ${it.a} ${tipoKey} ${it.b}`;
+      }
       if(it.tipo==='multiplicacion'&&Number(it.b)>Number(it.a)){const tmp=it.a;it.a=it.b;it.b=tmp;}
       return it;
     });
