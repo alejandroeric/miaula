@@ -1897,16 +1897,82 @@ async function genMathEx(){
   const tp=state.topic;
   const matCtx=tp.photoContent?`\nMaterial del tema:\n${tp.photoContent.substring(0,600)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
   const diff=state.exDifficulty||0;
-  // Dificultad relativa al grado+tema: el nivel base es lo apropiado para ese grado
-  const diffDesc=[
-    `Nivel 1: la versión más directa del tema para ${grade}° grado. Números simples apropiados para ese año. Problemas de 1 solo paso con planteo claro.`,
-    `Nivel 2: mismo tema de ${grade}° grado pero con números más grandes. Problemas de 1 paso con distintos planteos narrativos (no siempre "cuántos en total" — variá: diferencias, repartos, sobrantes, etc.).`,
-    `Nivel 3: problemas de 2 pasos encadenados. Primero calculás una cosa, con ese resultado hacés otra operación. Números acordes a ${grade}° grado.`,
-    `Nivel 4: problemas de 2-3 pasos con datos variados. Incluí algún dato que no se use. Planteos creativos con situaciones distintas entre sí.`,
-    `Nivel 5 (máximo): problemas complejos de múltiples pasos encadenados, datos mezclados, alguna trampa. Máxima complejidad posible dentro del tema de ${grade}° grado.`
-  ];
-  const diffInstr=diffDesc[Math.min(diff,4)];
-  const usedHint=(state.usedExercises||[]).length>0?`\nEVITÁ repetir estos ejercicios ya usados: ${state.usedExercises.slice(-8).join(' | ')}`:'';
+  // Mapa curricular: detecta el tipo de operación del tema y escala la dificultad DENTRO de sus reglas
+  const mathCurrMap=(titulo,grado,nivel)=>{
+    const t=(titulo||'').toLowerCase();
+    const r=n=>Math.floor(Math.random()*n);
+    const isMult=/multiplic/.test(t);
+    const isDiv=/divis/.test(t);
+    const isSuma=/\bsuma\b|adici/.test(t);
+    const isResta=/\bresta\b|sustra/.test(t);
+    const isFrac=/fracci/.test(t);
+    const isEcuac=/ecuac/.test(t);
+    const isPorcentaje=/porcent/.test(t);
+    // Genera semillas numéricas aleatorias para forzar variedad real en cada llamada
+    const seed=()=>`(referencia de números para que sean variados, no los únicos posibles: ${10+r(40)+r(50)}×${2+r(7)}, ${15+r(35)+r(40)}×${2+r(6)}, ${20+r(30)+r(30)}×${3+r(5)})`;
+    const seedDiv=()=>`(divisores de referencia variados: ${20+r(60)}÷${2+r(6)}, ${30+r(50)}÷${2+r(5)})`;
+    const seedSuma=()=>`(valores de referencia: ${10+r(40)+r(30)}+${10+r(40)+r(20)}, ${15+r(50)+r(20)}+${12+r(35)+r(15)})`;
+    const seedResta=()=>`(valores de referencia: ${30+r(40)+r(20)}-${10+r(20)+r(10)}, ${40+r(30)+r(20)}-${15+r(20)+r(10)})`;
+    if(isMult){return[
+      `Multiplicaciones del tema "${titulo}" — NIVEL 1: operaciones directas sin llevadas. Todos los ejercicios son cálculos de 1 paso, factores pequeños. ${seed()}`,
+      `Multiplicaciones del tema "${titulo}" — NIVEL 2: operaciones directas con llevadas, factores medianos. Al menos 2 problemas de texto de 1 paso con contextos distintos (repartos, precios, grupos, distancias — no siempre "cuántos en total"). ${seed()}`,
+      `Multiplicaciones del tema "${titulo}" — NIVEL 3: problemas de 2 pasos. Estructuras posibles: (a) multiplicación + suma/resta al resultado; (b) dos multiplicaciones separadas y al final sumá los resultados; (c) multiplicación y luego repartí el resultado. Mezclá estructuras entre los 5 ejercicios. ${seed()}`,
+      `Multiplicaciones del tema "${titulo}" — NIVEL 4: problemas de 2-3 pasos con datos variados. Estructuras: (a) multiplicación + resta con un dato extra que no se usa; (b) dos grupos distintos con distinta cantidad, calcular cada uno y comparar; (c) calcular total y luego cuánto falta o cuánto sobra. Planteos creativos y situaciones distintas entre sí. ${seed()}`,
+      `Multiplicaciones del tema "${titulo}" — NIVEL 5 MÁXIMO: problemas de 3+ pasos encadenados. Estructuras: (a) calculá dos subtotales por separado, sumá y después restá un gasto; (b) multiplicá, dividí el resultado entre grupos y compará; (c) situación con 3 variables donde hay que multiplicar en distintas etapas. Alguna trampa o dato irrelevante. ${seed()}`
+    ][Math.min(nivel,4)];}
+    if(isDiv){return[
+      `Divisiones del tema "${titulo}" — NIVEL 1: divisiones exactas, cociente de 1 dígito. 1 paso. ${seedDiv()}`,
+      `Divisiones del tema "${titulo}" — NIVEL 2: dividendos de 2-3 dígitos, cociente de 1-2 dígitos. Al menos 2 problemas de texto con contextos distintos (repartos, agrupamientos, precios unitarios). ${seedDiv()}`,
+      `Divisiones del tema "${titulo}" — NIVEL 3: problemas de 2 pasos. Estructuras: (a) dividir y después sumar o restar el resto/cociente; (b) dividir en dos grupos distintos y comparar los cocientes; (c) calcular cuántos grupos completos y cuántos quedan afuera. ${seedDiv()}`,
+      `Divisiones del tema "${titulo}" — NIVEL 4: problemas de 2-3 pasos. Estructuras: (a) multiplicar primero para obtener el total, luego dividir; (b) dividir dos cantidades distintas y sumar/restar los resultados; (c) situación con resto — interpretar qué significa el resto en el contexto del problema. Algún dato que no se usa. ${seedDiv()}`,
+      `Divisiones del tema "${titulo}" — NIVEL 5 MÁXIMO: problemas de 3+ pasos. Estructuras: (a) calcular un total con multiplicación, dividirlo y luego comparar con otro grupo; (b) repartir en etapas — primero en grupos grandes, luego en subgrupos; (c) situación combinada con suma, división y resta encadenadas. Alguna trampa. ${seedDiv()}`
+    ][Math.min(nivel,4)];}
+    if(isSuma){return[
+      `Sumas del tema "${titulo}" — NIVEL 1: sumas sin llevadas, sumandos chicos. 1 paso. ${seedSuma()}`,
+      `Sumas del tema "${titulo}" — NIVEL 2: sumas con llevadas, sumandos más grandes. Al menos 2 problemas de texto con contextos distintos. ${seedSuma()}`,
+      `Sumas del tema "${titulo}" — NIVEL 3: problemas de 2 pasos. Estructuras: (a) sumar dos cantidades y luego restar algo; (b) tres grupos de cantidades distintas, sumar todo y comparar con un total dado; (c) calcular cuánto falta para llegar a un total. ${seedSuma()}`,
+      `Sumas del tema "${titulo}" — NIVEL 4: problemas de 2-3 pasos con datos variados. Estructuras: (a) dos compras separadas, calcular cada una y ver si alcanza el dinero; (b) sumar, restar y volver a sumar en situaciones de dinero/puntajes/distancias; (c) dato irrelevante mezclado. ${seedSuma()}`,
+      `Sumas del tema "${titulo}" — NIVEL 5 MÁXIMO: problemas de 3+ pasos. Situaciones elaboradas con múltiples sumas y restas encadenadas. Alguna trampa. ${seedSuma()}`
+    ][Math.min(nivel,4)];}
+    if(isResta){return[
+      `Restas del tema "${titulo}" — NIVEL 1: restas sin llevar, diferencia positiva. 1 paso. ${seedResta()}`,
+      `Restas del tema "${titulo}" — NIVEL 2: restas llevando, números más grandes. Al menos 2 problemas de texto con contextos distintos. ${seedResta()}`,
+      `Restas del tema "${titulo}" — NIVEL 3: problemas de 2 pasos. Estructuras: (a) restar y luego comparar el resultado con otra cantidad; (b) calcular lo que sobró y volver a repartirlo; (c) dos restas encadenadas. ${seedResta()}`,
+      `Restas del tema "${titulo}" — NIVEL 4: problemas de 2-3 pasos. Estructuras: (a) sumar primero y luego restar en etapas; (b) calcular diferencias entre dos grupos y comparar; (c) situación con dato que no se usa. ${seedResta()}`,
+      `Restas del tema "${titulo}" — NIVEL 5 MÁXIMO: problemas de 3+ pasos con sumas y restas encadenadas. Alguna trampa o dato irrelevante. ${seedResta()}`
+    ][Math.min(nivel,4)];}
+    if(isFrac){return[
+      `Fracciones del tema "${titulo}": casos más simples — mismo denominador, fracciones propias. 1 operación.`,
+      `Fracciones del tema "${titulo}": denominadores distintos, simplificación. 1 operación, contextos variados.`,
+      `Fracciones del tema "${titulo}": 2 operaciones encadenadas, mezcla de propias e impropias.`,
+      `Fracciones del tema "${titulo}": 2-3 pasos, combiná sumas, restas y conversiones. Planteos variados.`,
+      `Fracciones del tema "${titulo}": máxima complejidad — múltiples pasos, situaciones elaboradas, alguna trampa.`
+    ][Math.min(nivel,4)];}
+    if(isEcuac){return[
+      `Ecuaciones del tema "${titulo}": 1 incógnita, 1 paso para despejar.`,
+      `Ecuaciones del tema "${titulo}": 1 incógnita, 2 pasos para despejar (trasladar término + dividir).`,
+      `Ecuaciones del tema "${titulo}": 2-3 pasos, miembros más complejos, verificación del resultado.`,
+      `Ecuaciones del tema "${titulo}": sistema de 2 ecuaciones o ecuaciones con paréntesis.`,
+      `Ecuaciones del tema "${titulo}": máxima complejidad — sistemas, fracciones, situaciones elaboradas.`
+    ][Math.min(nivel,4)];}
+    if(isPorcentaje){return[
+      `Porcentajes del tema "${titulo}": calcular % de un número, caso directo (10%, 50%, 25%).`,
+      `Porcentajes del tema "${titulo}": porcentajes menos "redondos" (15%, 30%, 35%). 1 paso.`,
+      `Porcentajes del tema "${titulo}": calcular el total conociendo el porcentaje, o comparar dos porcentajes.`,
+      `Porcentajes del tema "${titulo}": 2 pasos — descuento + precio final, IVA, aumentos.`,
+      `Porcentajes del tema "${titulo}": máxima complejidad — múltiples porcentajes encadenados, situaciones elaboradas.`
+    ][Math.min(nivel,4)];}
+    // Fallback genérico para temas no detectados
+    return[
+      `Ejercicios de "${titulo}" nivel básico: la versión más directa y simple para ${grado}° grado. 1 paso por ejercicio.`,
+      `Ejercicios de "${titulo}" nivel medio: valores o casos más complejos. 1 paso, contextos variados.`,
+      `Ejercicios de "${titulo}" con 2 operaciones o pasos encadenados.`,
+      `Ejercicios de "${titulo}" complejos: 2-3 pasos, planteos variados, algún dato que no se usa.`,
+      `Ejercicios de "${titulo}" máxima dificultad: múltiples pasos, situaciones elaboradas, alguna trampa.`
+    ][Math.min(nivel,4)];
+  };
+  const diffInstr=mathCurrMap(tp.title,grade,diff);
+  const usedHint=(state.usedExercises||[]).length>0?`\nPROHIBIDO repetir estos ejercicios ya generados (ni los mismos números, ni el mismo planteo): ${state.usedExercises.slice(-12).join(' | ')}`:'';
   const name=state.activeStudent?.name||'el alumno';
   const nivel=Number(grade)>=7?'secundaria':'primaria';
   const r=await ai([{role:'user',content:`Generá 5 ejercicios de matemática para un alumno de ${grade}° grado de ${nivel} argentina sobre el tema "${tp.title}".${matCtx}
@@ -1916,7 +1982,7 @@ REGLAS OBLIGATORIAS:
 2. El tema "${tp.title}" define QUÉ operaciones hacer. No te salgas del tema.
 3. DIFICULTAD — ${diffInstr} Respetá estrictamente los rangos numéricos indicados.
 4. Para problemas usá situaciones cotidianas y el nombre: ${name}.
-5. Generá ejercicios VARIADOS y DISTINTOS entre sí. Usá números diferentes en cada uno.${usedHint}
+5. VARIEDAD OBLIGATORIA: cada ejercicio debe tener números COMPLETAMENTE DISTINTOS entre sí y distintos a los de tandas anteriores. Si el material del tema tiene números de ejemplo, NO los copies — son solo referencia del tipo de operación, no los valores a usar. Inventá números nuevos cada vez.${usedHint}
 
 FORMATO JSON — campo "tipo" tiene SOLO 5 valores posibles: "suma", "resta", "multiplicacion", "division", "problema". NUNCA uses "operacion", "mcd", "mcm", "potencia" ni ningún otro valor.
 - Operación directa: {"tipo":"suma","a":245,"b":138,"resultado":383}
