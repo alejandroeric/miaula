@@ -1700,7 +1700,7 @@ Ejercicio X:
 }
 
 async function genEx(){
-  if(state.subj.id==='matematica'&&(state.exFormat||'completar')==='completar'){genMathEx();return;}
+  if(state.subj.id==='matematica'&&(state.exFormat||'completar')==='completar'){await genMathEx();return;}
   state.loadingEx=true;render();
   const isIngles=state.subj.id==='ingles'||!!state.subj.isIdioma;
   const langName=state.subj.n||'Inglés';
@@ -1897,17 +1897,26 @@ async function genMathEx(){
   const tp=state.topic;
   const matCtx=tp.photoContent?`\nMaterial del tema:\n${tp.photoContent.substring(0,600)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
   const diff=state.exDifficulty||0;
-  const diffDesc=['igual complejidad que el tema pero en su versión más directa y sencilla','un paso más de complejidad: agregá llevadas o un paso extra en los problemas','complejidad media-alta: números más grandes, problemas con dos operaciones','alta complejidad: problemas con varios pasos, números grandes, algún dato que no se usa','máxima complejidad posible dentro del tema: problemas elaborados, múltiples operaciones encadenadas'];
-  const diffLabel=['Nivel 1','Nivel 2','Nivel 3','Nivel 4','Nivel 5'][Math.min(diff,4)];
+  // Rangos numéricos explícitos por nivel para que el AI no ignore la dificultad
+  const diffDesc=[
+    'Nivel 1 (más fácil): operaciones directas con números de 1 dígito (1-9). Problemas simples de 1 paso.',
+    'Nivel 2: operaciones con números de 2 dígitos (10-99). Problemas de 1 paso con contexto cotidiano.',
+    'Nivel 3: números de 2-3 dígitos (10-999), llevadas obligatorias. Problemas de 2 pasos.',
+    'Nivel 4: números de 3-4 dígitos. Problemas de 2-3 pasos, algún dato irrelevante incluido.',
+    'Nivel 5 (máxima complejidad): números grandes, múltiples operaciones encadenadas, problemas elaborados.'
+  ];
   const diffInstr=diffDesc[Math.min(diff,4)];
+  const usedHint=(state.usedExercises||[]).length>0?`\nEVITÁ repetir estos ejercicios ya usados: ${state.usedExercises.slice(-8).join(' | ')}`:'';
+  const name=state.activeStudent?.name||'el alumno';
   const nivel=Number(grade)>=7?'secundaria':'primaria';
   const r=await ai([{role:'user',content:`Generá 5 ejercicios de matemática para un alumno de ${grade}° grado de ${nivel} argentina sobre el tema "${tp.title}".${matCtx}
 
 REGLAS OBLIGATORIAS:
-1. Los ejercicios deben ser 100% apropiados para ${grade}° grado ${nivel} Argentina. Usá los rangos numéricos, operaciones y conceptos exactos de ese año.
-2. El tema "${tp.title}" define QUÉ tipo de operaciones hacer. No te salgas del tema.
-3. ${diffLabel} de dificultad dentro del tema: ${diffInstr}.
-4. Para problemas usá situaciones cotidianas y el nombre: ${state.activeStudent?.name||'el alumno'}.
+1. Los ejercicios deben ser 100% apropiados para ${grade}° grado ${nivel} Argentina.
+2. El tema "${tp.title}" define QUÉ operaciones hacer. No te salgas del tema.
+3. DIFICULTAD — ${diffInstr} Respetá estrictamente los rangos numéricos indicados.
+4. Para problemas usá situaciones cotidianas y el nombre: ${name}.
+5. Generá ejercicios VARIADOS y DISTINTOS entre sí. Usá números diferentes en cada uno.${usedHint}
 
 FORMATO JSON — campo "tipo" tiene SOLO 5 valores posibles: "suma", "resta", "multiplicacion", "division", "problema". NUNCA uses "operacion", "mcd", "mcm", "potencia" ni ningún otro valor.
 - Operación directa: {"tipo":"suma","a":245,"b":138,"resultado":383}
@@ -1947,6 +1956,12 @@ Devolvé SOLO el JSON array, sin texto, sin markdown.`}],
       }
       if(it.tipo==='multiplicacion'&&Number(it.b)>Number(it.a)){const tmp=it.a;it.a=it.b;it.b=tmp;}
       return it;
+    });
+    // Registrar los ejercicios usados para evitar repetición en la próxima tanda
+    if(!state.usedExercises)state.usedExercises=[];
+    state.mathItems.forEach(it=>{
+      const desc=it.tipo==='problema'?it.enunciado?.substring(0,50):`${it.tipo} ${it.a} ${it.b}`;
+      if(desc)state.usedExercises.push(desc);
     });
   }catch{
     state.mathItems=[{tipo:'problema',enunciado:'Resolvé: 25 + 37 =',resultado:62}];
