@@ -1897,13 +1897,13 @@ async function genMathEx(){
   const tp=state.topic;
   const matCtx=tp.photoContent?`\nMaterial del tema:\n${tp.photoContent.substring(0,600)}`:tp.desc?`\nContexto: ${tp.desc}`:'';
   const diff=state.exDifficulty||0;
-  // Rangos numéricos explícitos por nivel para que el AI no ignore la dificultad
+  // Dificultad relativa al grado+tema: el nivel base es lo apropiado para ese grado
   const diffDesc=[
-    'Nivel 1 (más fácil): operaciones directas con números de 1 dígito (1-9). Problemas simples de 1 paso.',
-    'Nivel 2: operaciones con números de 2 dígitos (10-99). Problemas de 1 paso con contexto cotidiano.',
-    'Nivel 3: números de 2-3 dígitos (10-999), llevadas obligatorias. Problemas de 2 pasos.',
-    'Nivel 4: números de 3-4 dígitos. Problemas de 2-3 pasos, algún dato irrelevante incluido.',
-    'Nivel 5 (máxima complejidad): números grandes, múltiples operaciones encadenadas, problemas elaborados.'
+    `Nivel 1: la versión más directa del tema para ${grade}° grado. Números simples apropiados para ese año. Problemas de 1 solo paso con planteo claro.`,
+    `Nivel 2: mismo tema de ${grade}° grado pero con números más grandes. Problemas de 1 paso con distintos planteos narrativos (no siempre "cuántos en total" — variá: diferencias, repartos, sobrantes, etc.).`,
+    `Nivel 3: problemas de 2 pasos encadenados. Primero calculás una cosa, con ese resultado hacés otra operación. Números acordes a ${grade}° grado.`,
+    `Nivel 4: problemas de 2-3 pasos con datos variados. Incluí algún dato que no se use. Planteos creativos con situaciones distintas entre sí.`,
+    `Nivel 5 (máximo): problemas complejos de múltiples pasos encadenados, datos mezclados, alguna trampa. Máxima complejidad posible dentro del tema de ${grade}° grado.`
   ];
   const diffInstr=diffDesc[Math.min(diff,4)];
   const usedHint=(state.usedExercises||[]).length>0?`\nEVITÁ repetir estos ejercicios ya usados: ${state.usedExercises.slice(-8).join(' | ')}`:'';
